@@ -18,6 +18,18 @@ from poppy.transport.pecan.models.request import rule
 
 
 def load_from_json(json_data):
+    """
+
+    Deserialize Restriction object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import restriction
+        Restriction_obj = restriction.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of Restriction object related key, values
+    :return: Restriction object loaded from json_data
+    :rtype: Restriction
+    """
     name = json_data.get('name')
     access = json_data.get('access', 'whitelist')
     res = restriction.Restriction(name, access)

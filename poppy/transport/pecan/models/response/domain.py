@@ -21,8 +21,19 @@ from poppy.common import util
 
 
 class Model(collections.OrderedDict):
+    """
 
-    'response class for Domain.'
+    Serialize a domain object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model.helpers import domain
+        from poppy.transport.pecan.models.response import domain as domain_response
+        domain_response_obj = domain.Domain('domain')
+        return domain_response.Model(domain_response_obj, self)
+
+    """
+
 
     def __init__(self, domain):
         super(Model, self).__init__()

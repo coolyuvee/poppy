@@ -55,6 +55,14 @@ class ServiceAssetsController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def delete(self, service_id):
+        """
+
+        Purge a service by id
+        :type service_id: str
+        :param service_id: Id of the service to delete
+        :return: Pecan's response with 202 status
+        :rtype: pecan.Response
+        """
         purge_url = pecan.request.GET.get('url', '/*')
         purge_all = pecan.request.GET.get('all', False)
         hard = pecan.request.GET.get('hard', 'True')
@@ -110,8 +118,14 @@ class ServicesAnalyticsController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def get(self, service_id):
-        '''Get Analytics By Domain Data'''
+        """
 
+        Get metrics by domain of this service id
+        :type service_id: str
+        :param service_id: Id of the service to retrieve the metrics by domain
+        :return: Pecan response object with http status code 200 or 500 or 404 or 400
+        :rtype: pecan.Response
+        """
         call_args = getattr(pecan.request.context,
                             "call_args")
         domain = call_args.pop('domain')
@@ -153,6 +167,11 @@ class ServicesController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get_all(self):
+        """
+        Get all the services available
+        :return: Dict of links and services
+        :rtype: dict
+        """
         marker = pecan.request.GET.get('marker', None)
         limit = pecan.request.GET.get('limit', 10)
         try:
@@ -202,6 +221,14 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def get_one(self, service_id):
+        """
+
+        Get a service by id
+        :type service_id: str
+        :param service_id: Id of the service to retrieve
+        :return: Service details
+        :rtype: collections.OrderedDict
+        """
         services_controller = self._driver.manager.services_controller
         try:
             service_obj = services_controller.get_service(
@@ -220,6 +247,11 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
+        """
+        Create a new service
+        :return: Pecan response with status 202
+        :rtype: pecan.Response
+        """
         services_controller = self._driver.manager.services_controller
         service_json_dict = json.loads(pecan.request.body.decode('utf-8'))
         service_id = None
@@ -254,6 +286,13 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def delete(self, service_id):
+        """
+        Delete a service by id
+        :type service_id: str
+        :param service_id: Id of the service to delete
+        :return: Pecan response with http status code 202 or 404
+        :rtype: pecan.Response
+        """
         services_controller = self._driver.manager.services_controller
 
         try:
@@ -276,6 +315,14 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def patch_one(self, service_id):
+        """
+
+        Update a service
+        :type service_id: str
+        :param service_id: Id of the service to update
+        :return: Pecan response with http status code 202 or 400 or 404
+        :rtype: pecan.Response
+        """
         service_updates = json.loads(pecan.request.body.decode('utf-8'))
 
         services_controller = self._driver.manager.services_controller

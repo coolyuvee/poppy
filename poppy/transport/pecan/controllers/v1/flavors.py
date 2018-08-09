@@ -31,15 +31,17 @@ from poppy.transport.validators.stoplight import rule
 
 
 class FlavorsController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     """Flavors Controller."""
 
     @pecan.expose('json')
     def get_all(self):
-        """get all flavor list."""
-
+        """
+        Get all the flavors
+        :return: List of available flavors in the system
+        :rtype: dict
+        """
         flavors_controller = self.driver.manager.flavors_controller
         result = flavors_controller.list()
 
@@ -57,10 +59,12 @@ class FlavorsController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def get_one(self, flavor_id):
-        """get_one
-
-        :param flavor_model
-        :returns JSON flavor(HTTP 200) or HTTP 404
+        """
+        Get A flavor details by it's id
+        :param flavor_id: Flavor id
+        :type flavor_id: str
+        :return: Serialized response with the Flavor details wrapped
+        :rtype: collections.OrderedDict
         """
         flavors_controller = self.driver.manager.flavors_controller
         try:
@@ -78,9 +82,10 @@ class FlavorsController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
-        """POST
-
-        :returns JSON flavor(HTTP 200) or HTTP 400
+        """
+        Create a new flavor
+        :return: Newly created flavor
+        :rtype: collections.OrderedDict
         """
         flavors_controller = self.driver.manager.flavors_controller
         flavor_json = json.loads(pecan.request.body.decode('utf-8'))
@@ -104,10 +109,10 @@ class FlavorsController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def delete(self, flavor_id):
-        """DELETE
-
-        :param flavor_model
-        :returns HTTP 204
+        """
+        Delete an existing flavor
+        :param flavor_id: Flavor id to be deleted
+        :type flavor_id: str
         """
         flavors_controller = self.driver.manager.flavors_controller
         flavors_controller.delete(flavor_id)

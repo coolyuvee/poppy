@@ -21,7 +21,17 @@ except ImportError:        # pragma: no cover
 
 class Model(collections.OrderedDict):
 
-    'Response class for Log Delivery'
+    """
+    Serialize a log_delivery object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model import log_delivery
+        from poppy.transport.pecan.models.response import log_delivery as log_delivery_response
+        log_delivery_obj = log_delivery.LogDelivery()
+        return log_delivery_response.Model(log_delivery_obj, self)
+
+    """
 
     def __init__(self, log_delivery):
         super(Model, self).__init__()

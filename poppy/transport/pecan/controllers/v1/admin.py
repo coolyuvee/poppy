@@ -50,6 +50,11 @@ class DomainMigrationController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
+        """
+        Update the certificate status for the provider belonging to service and domain
+        :return: Pecan response with http status 202 or 404
+        :rtype: pecan.Response
+        """
         request_json = json.loads(pecan.request.body.decode('utf-8'))
         project_id = request_json.get('project_id', None)
         service_id = request_json.get('service_id', None)
@@ -97,6 +102,14 @@ class AdminProviderDetailsController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def patch_one(self, service_id):
+        """
+
+        Update the access urls for service
+        :type service_id: str
+        :param service_id:
+        :return: Pecan response with http status code 201 or 202 400 or 404
+        :rtype: pecan.Response
+        """
         request_json = json.loads(pecan.request.body.decode('utf-8'))
         project_id = request_json.get('project_id', None)
         domain_name = request_json.get('domain_name', None)
@@ -109,16 +122,16 @@ class AdminProviderDetailsController(base.Controller, hooks.HookController):
 
         changes_made = False
         try:
-            changes_made = self._driver.manager.services_controller.\
+            changes_made = self._driver.manager.services_controller. \
                 update_access_url_service(
-                    project_id,
-                    service_id,
-                    access_url_changes={
-                        'domain_name': domain_name,
-                        'operator_url': operator_url,
-                        'provider_url': provider_url
-                    }
-                )
+                project_id,
+                service_id,
+                access_url_changes={
+                    'domain_name': domain_name,
+                    'operator_url': operator_url,
+                    'provider_url': provider_url
+                }
+            )
         except errors.ServiceNotFound:
             pecan.abort(404, detail='Service {0} could not be found'.format(
                 service_id))
@@ -148,6 +161,11 @@ class BackgroundJobController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
+        """
+        Post a new background job
+        :return: Pecan response with json and   http status 202 or 404
+        :rtype: pecan.Response
+        """
         request_json = json.loads(pecan.request.body.decode('utf-8'))
         job_type = request_json.pop('job_type')
 
@@ -155,7 +173,7 @@ class BackgroundJobController(base.Controller, hooks.HookController):
         ignored = []
 
         try:
-            sent, ignored = self._driver.manager.background_job_controller.\
+            sent, ignored = self._driver.manager.background_job_controller. \
                 post_job(job_type, request_json)
         except NotImplementedError as e:
             pecan.abort(400, str(e))
@@ -179,6 +197,12 @@ class AkamaiSanMappingListController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get_all(self):
+        """
+
+        Get the list of SAN mapping
+        :return: A list of SAN mappings
+        :rtype: list
+        """
         try:
             return (
                 self.manager.background_job_controller.get_san_mapping_list())
@@ -194,7 +218,10 @@ class AkamaiSanMappingListController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def put(self):
-        """The input of the queue data must be a list of dictionaries:
+        """
+        Put the items in the SAN mapping list for the processing
+
+        The input of the queue data must be a list of dictionaries:
 
         (after json loaded)
         [
@@ -202,14 +229,17 @@ class AkamaiSanMappingListController(base.Controller, hooks.HookController):
             "san_cert_name": <san_cert_name>
           }
         ]
+
+        :return Dictionary consisting of the new queue and deleted items
+        :rtype : dict
         """
         try:
             san_mapping_list = json.loads(pecan.request.body.decode('utf-8'))
             res, deleted = (
                 self.manager.background_job_controller.
-                put_san_mapping_list(san_mapping_list))
+                    put_san_mapping_list(san_mapping_list))
             # queue is the new queue, and deleted is deleted items
-            return {"queue": res,  "deleted": deleted}
+            return {"queue": res, "deleted": deleted}
         except Exception as e:
             pecan.abort(400, str(e))
 
@@ -222,11 +252,17 @@ class AkamaiRetryListController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get_all(self):
+        """
+
+        Get the mod-san Re-try list
+        :return: List of items in mod-san retry
+        :rtype: list
+        """
         retry_list = None
         try:
             retry_list = (
                 self._driver.manager.ssl_certificate_controller.
-                get_san_retry_list())
+                    get_san_retry_list())
         except Exception as e:
             pecan.abort(404, str(e))
 
@@ -234,10 +270,14 @@ class AkamaiRetryListController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def post(self):
-        """Rerun retry-list mod-san requests."""
+        """
+        Rerun retry-list mod-san requests.
+        :return: Pecan response with JSON and http status code 202 or 404
+        :rtype: pecan.Response
+        """
         sent, ignored = None, None
         try:
-            sent, ignored = self._driver.manager.ssl_certificate_controller.\
+            sent, ignored = self._driver.manager.ssl_certificate_controller. \
                 rerun_san_retry_list()
         except Exception as e:
             pecan.abort(404, str(e))
@@ -256,7 +296,9 @@ class AkamaiRetryListController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def put(self):
-        """The input of the queue data must be a list of dictionaries:
+        """
+        Update the mod-san retry list
+        The input of the queue data must be a list of dictionaries:
 
         (after json loaded)
         [
@@ -265,14 +307,16 @@ class AkamaiRetryListController(base.Controller, hooks.HookController):
             "flavor_id": <flavor_id> }
         ]
 
+        :return: Dictionary consisting of new queue and deleted items
+        :rtype: dict
         """
         try:
             queue_data = json.loads(pecan.request.body.decode('utf-8'))
             res, deleted = (
                 self._driver.manager.ssl_certificate_controller.
-                update_san_retry_list(queue_data))
+                    update_san_retry_list(queue_data))
             # queue is the new queue, and deleted is deleted items
-            return {"queue": res,  "deleted": deleted}
+            return {"queue": res, "deleted": deleted}
         except Exception as e:
             pecan.abort(400, str(e))
 
@@ -286,12 +330,20 @@ class AkamaiSanCertConfigController(base.Controller, hooks.HookController):
             helpers.is_valid_domain_by_name_or_akamai_setting(),
             helpers.abort_with_message))
     def get_one(self, query):
-
+        """
+        Get SAN certificate hostname limit or the configuration depending on the query
+        :type query: str
+        :param query: Use value 'san_cert_hostname_limit' to get the hostname limit,
+                      else configuration will be returned
+        :return: Dictionary with hostname limit or configuration if success,
+                 else Pecan response with http status code 400
+        :rtype: dict
+        """
         if query == 'san_cert_hostname_limit':
             try:
                 return (
                     self._driver.manager.ssl_certificate_controller.
-                    get_san_cert_hostname_limit()
+                        get_san_cert_hostname_limit()
                 )
             except Exception as e:
                 pecan.abort(400, str(e))
@@ -299,7 +351,7 @@ class AkamaiSanCertConfigController(base.Controller, hooks.HookController):
             try:
                 return (
                     self._driver.manager.ssl_certificate_controller.
-                    get_san_cert_configuration(query)
+                        get_san_cert_configuration(query)
                 )
             except Exception as e:
                 pecan.abort(400, str(e))
@@ -316,6 +368,13 @@ class AkamaiSanCertConfigController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self, query):
+        """
+        Set the hostname limit or configuration for the SAN certificate depending on the query
+        :type query: str
+        :param query: Use 'san_cert_hostname_limit' to set the hostname limit
+        :return: Pecan response with http status 202 or 400
+        :rtype: pecan.Response
+        """
         request_json = json.loads(pecan.request.body.decode('utf-8'))
 
         if query == 'san_cert_hostname_limit':
@@ -330,7 +389,7 @@ class AkamaiSanCertConfigController(base.Controller, hooks.HookController):
             try:
                 res = (
                     self._driver.manager.ssl_certificate_controller.
-                    update_san_cert_configuration(query, request_json))
+                        update_san_cert_configuration(query, request_json))
                 return res
             except Exception as e:
                 pecan.abort(400, str(e))
@@ -344,11 +403,19 @@ class AkamaiSNICertConfigController(base.Controller, hooks.HookController):
         query=rule.Rule(
             helpers.is_valid_domain_by_name(),
             helpers.abort_with_message))
-    def get_one(self, query):
+    def get_one(self, cert_name):
+        """
+
+        Get SNI certificate configuration
+        :type cert_name: str
+        :param cert_name: The name of the SNI certificate
+        :return: The SNI certificate details
+        :rtype: dict
+        """
         try:
             return (
                 self._driver.manager.ssl_certificate_controller.
-                get_sni_cert_configuration(query)
+                    get_sni_cert_configuration(cert_name)
             )
         except Exception as e:
             pecan.abort(400, str(e))
@@ -364,12 +431,19 @@ class AkamaiSNICertConfigController(base.Controller, hooks.HookController):
                     "sni_config", "POST")),
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
-    def post(self, query):
+    def post(self, cert_name):
+        """
+        Update the configuration for SNI certificate
+        :type cert_name: str
+        :param cert_name:
+        :return: Updated configuration
+        :rtype: dict
+        """
         request_json = json.loads(pecan.request.body.decode('utf-8'))
         try:
             res = (
                 self._driver.manager.ssl_certificate_controller.
-                update_sni_cert_configuration(query, request_json))
+                    update_sni_cert_configuration(cert_name, request_json))
             return res
         except Exception as e:
             pecan.abort(400, str(e))
@@ -400,7 +474,6 @@ class ProviderController(base.Controller, hooks.HookController):
 
 
 class OperatorServiceActionController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     def __init__(self, driver):
@@ -415,7 +488,12 @@ class OperatorServiceActionController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
+        """
 
+        Perform action on a list of services
+        :return: Pecan response with http status code 202 or 404
+        :rtype: pecan.Response
+        """
         service_state_json = json.loads(pecan.request.body.decode('utf-8'))
         service_action = service_state_json.get('action', None)
         project_id = service_state_json.get('project_id', None)
@@ -429,15 +507,14 @@ class OperatorServiceActionController(base.Controller, hooks.HookController):
 
         except Exception as e:
             pecan.abort(404, detail=(
-                        'Services action {0} on tenant: {1} failed, '
-                        'Reason: {2}'.format(service_action,
-                                             project_id, str(e))))
+                'Services action {0} on tenant: {1} failed, '
+                'Reason: {2}'.format(service_action,
+                                     project_id, str(e))))
 
         return pecan.Response(None, 202)
 
 
 class OperatorServiceLimitController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     def __init__(self, driver):
@@ -456,7 +533,14 @@ class OperatorServiceLimitController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def put(self, project_id):
-
+        """
+        
+        Set limit on number of services per project
+        :type project_id: int
+        :param project_id: Id of the project to set the service limit
+        :return: Pecan response with http status code 201 or 404
+        :rtype: pecan.Response
+        """
         service_state_json = json.loads(pecan.request.body.decode('utf-8'))
         project_limit = service_state_json.get('limit', None)
 
@@ -467,9 +551,9 @@ class OperatorServiceLimitController(base.Controller, hooks.HookController):
                                                project_limit)
         except Exception as e:
             pecan.abort(404, detail=(
-                        'Services limit {0} on tenant: {1} failed, '
-                        'Reason: {2}'.format(project_limit,
-                                             project_id, str(e))))
+                'Services limit {0} on tenant: {1} failed, '
+                'Reason: {2}'.format(project_limit,
+                                     project_id, str(e))))
 
         return pecan.Response(None, 201)
 
@@ -480,6 +564,14 @@ class OperatorServiceLimitController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def get_one(self, project_id):
+        """
+
+        Get currently set limit on number of services per this project id
+        :type project_id: int
+        :param project_id: Id of the Project to get the service limit
+        :return: Dictionary with the current value of limits
+        :rtype: dict
+        """
         services_controller = self._driver.manager.services_controller
 
         service_limits = services_controller.get_services_limit(
@@ -489,7 +581,6 @@ class OperatorServiceLimitController(base.Controller, hooks.HookController):
 
 
 class ServiceStatusController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     def __init__(self, driver):
@@ -505,7 +596,12 @@ class ServiceStatusController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def post(self):
+        """
 
+        Update or set status of the service with provider details
+        :return: Pecan response with http status code 201 or 202 or 404
+        :rtype: pecan.Response
+        """
         service_state_json = json.loads(pecan.request.body.decode('utf-8'))
         project_id = service_state_json['project_id']
         service_id = service_state_json['service_id']
@@ -522,18 +618,17 @@ class ServiceStatusController(base.Controller, hooks.HookController):
             )
         except Exception as e:
             pecan.abort(404, detail=(
-                        'Setting state of service {0} on tenant: {1} '
-                        'to {2} has failed, '
-                        'Reason: {3}'.format(service_id,
-                                             project_id,
-                                             status,
-                                             str(e))))
+                'Setting state of service {0} on tenant: {1} '
+                'to {2} has failed, '
+                'Reason: {3}'.format(service_id,
+                                     project_id,
+                                     status,
+                                     str(e))))
 
         return pecan.Response(None, status_code)
 
 
 class AdminCertController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     def __init__(self, driver):
@@ -547,6 +642,12 @@ class AdminCertController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def get(self):
+        """
+
+        Get ssl certificates by status
+        :return: Pecan response with http status 200 and json
+        :rtype: pecan.Response
+        """
         ssl_certificate_controller = (
             self._driver.manager.ssl_certificate_controller
         )
@@ -576,7 +677,14 @@ class AdminCertController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def patch_one(self, domain_name):
+        """
 
+        Update certificate for a domain
+        :type domain_name: str
+        :param domain_name: Name of the domain for which the certificate needs to be updated
+        :return: Pecan response with http status code 204 or 400 or 404
+        :rtype: pecan.Response
+        """
         ssl_certificate_controller = (
             self._driver.manager.ssl_certificate_controller
         )
@@ -600,7 +708,6 @@ class AdminCertController(base.Controller, hooks.HookController):
 
 
 class AdminServiceController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     def __init__(self, driver):
@@ -619,6 +726,12 @@ class AdminServiceController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def get(self):
+        """
+
+        Get services by status
+        :return: JSON response with http status 200
+        :rtype: pecan.Response
+        """
         services_controller = self._driver.manager.services_controller
 
         call_args = getattr(pecan.request.context,
@@ -632,7 +745,6 @@ class AdminServiceController(base.Controller, hooks.HookController):
 
 
 class DomainController(base.Controller, hooks.HookController):
-
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
     def __init__(self, driver):
@@ -647,13 +759,21 @@ class DomainController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def get_one(self, domain_name):
+        """
+
+        Get services by domain name
+        :type domain_name: str
+        :param domain_name: Name of the domain
+        :return: JSON response model
+        :rtype: collections.OrderedDict
+        """
         services_controller = self._driver.manager.services_controller
         try:
             service_obj = services_controller.get_service_by_domain_name(
                 domain_name)
         except LookupError:
             pecan.abort(404, detail='Domain %s cannot be found' %
-                        domain_name)
+                                    domain_name)
         # convert a service model into a response service model
         return resp_service_model.Model(service_obj, self)
 
@@ -665,6 +785,12 @@ class DomainController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def get(self):
+        """
+
+        Get domains by provider url
+        :return: Pecan response with http status 200 and json
+        :rtype: pecan.Response
+        """
         services_controller = self._driver.manager.services_controller
 
         call_args = getattr(pecan.request.context,

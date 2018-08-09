@@ -18,6 +18,17 @@ from poppy.transport.pecan.models.request import rule
 
 
 def load_from_json(json_data):
+    """
+    Deserialize Origin object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import origin
+        Origin_obj = origin.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of Origin object related key, values
+    :return: Origin object loaded from json_data
+    :rtype: Origin
+    """
     origin_name = json_data.get("origin")
     origin_name = origin_name.rstrip("/")
     hostheadertype = json_data.get("hostheadertype", "domain")

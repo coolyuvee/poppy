@@ -22,8 +22,17 @@ from poppy.transport.pecan.models.response import rule
 
 
 class Model(collections.OrderedDict):
+    """
+    Serialize a cachingrule object into an OrderedDict.
+    Can be used to send the service details back to client.
 
-    'response class for CachingRules'
+    Example :
+        from poppy.model.helpers import cachingrule
+        from poppy.transport.pecan.models.response import cachingrule as cachingrule_response
+        cachingrule_response_obj = cachingrule.CachingRule('name', 'ttl')
+        return cachingrule_response.Model(cachingrule_response_obj, self)
+
+    """
 
     def __init__(self, caching):
         super(Model, self).__init__()

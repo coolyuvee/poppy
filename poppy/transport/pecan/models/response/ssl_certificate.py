@@ -22,7 +22,17 @@ from poppy.common import util
 
 class Model(collections.OrderedDict):
 
-    """response class for SSLCertificate."""
+    """
+    Serialize an ssl_certificate object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model import ssl_certificate
+        from poppy.transport.pecan.models.response import ssl_certificate as ssl_certificate_response
+        ssl_certificate_obj = ssl_certificate.SSLCertificate('flavor id', 'domain', ...)
+        return ssl_certificate_response.Model(ssl_certificate_obj, self)
+
+    """
 
     def __init__(self, ssl_certificate):
         super(Model, self).__init__()

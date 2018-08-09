@@ -29,7 +29,9 @@ class ErrorHook(hooks.PecanHook):
     '''Intercepts all errors during request fulfillment and logs them.'''
 
     def on_error(self, state, exception):
-        '''Fires off when an error happens during a request.
+        """
+
+        Fires off when an error happens during a request.
 
         :param state: The Pecan state for the current request.
         :type state: pecan.core.state
@@ -37,7 +39,8 @@ class ErrorHook(hooks.PecanHook):
         :type exception: Exception
         :returns: webob.Response -- JSON response with the error
             message.
-        '''
+        :rtype: webob.Response
+        """
         exception_payload = {
             'status': 500,
         }

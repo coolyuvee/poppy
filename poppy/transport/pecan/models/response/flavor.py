@@ -22,7 +22,17 @@ from poppy.transport.pecan.models.response import link
 
 
 class Model(collections.OrderedDict):
+    """
+    Serialize a flavor object into an OrderedDict.
+    Can be used to send the flavor details back to client.
 
+    Example :
+        from poppy.model import flavor
+        from poppy.transport.pecan.models.response import flavor as flavor_response
+        flavor_obj = flavor.Flavor('Premium', [])
+        return flavor_response.Model(flavor_obj, self)
+
+    """
     def __init__(self, flavor, controller):
         super(Model, self).__init__()
 

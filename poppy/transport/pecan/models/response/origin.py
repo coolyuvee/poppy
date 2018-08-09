@@ -22,8 +22,19 @@ from poppy.transport.pecan.models.response import rule
 
 
 class Model(collections.OrderedDict):
+    """
 
-    'response class for Origin'
+    Serialize an Origin object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model.helpers import origin
+        from poppy.transport.pecan.models.response import origin as origin_response
+        origin_response_obj = origin.Origin('origin')
+        return origin_response.Model(origin_response_obj, self)
+
+    """
+
 
     def __init__(self, origin):
         super(Model, self).__init__()

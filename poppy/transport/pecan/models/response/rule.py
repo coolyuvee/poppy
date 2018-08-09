@@ -22,7 +22,18 @@ from poppy.common import util
 
 class Model(collections.OrderedDict):
 
-    """response class for rule."""
+    """
+
+    Serialize a Rule object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model.helpers import rule
+        from poppy.transport.pecan.models.response import rule as rule_response
+        rule_response_obj = rule.Rule('name')
+        return rule_response.Model(rule_response_obj, self)
+
+    """
 
     def __init__(self, rule):
         super(Model, self).__init__()

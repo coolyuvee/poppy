@@ -23,8 +23,19 @@ from poppy.transport.pecan.models.response import rule
 
 
 class Model(collections.OrderedDict):
+    """
 
-    'response class for Restriction'
+    Serialize a Restriction object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model.helpers import restriction
+        from poppy.transport.pecan.models.response import restriction as restriction_response
+        restriction_response_obj = restriction.Restriction('name')
+        return restriction_response.Model(restriction_response_obj, self)
+
+    """
+
 
     def __init__(self, restriction):
         super(Model, self).__init__()

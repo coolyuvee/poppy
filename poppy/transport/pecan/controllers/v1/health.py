@@ -29,14 +29,14 @@ class DNSHealthController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self, dns_name):
-        """GET.
-
-        Returns the health of DNS Provider
-
-        :param dns_name
-        :returns JSON storage model or HTTP 404
         """
 
+        Returns the health of DNS Provider
+        :type dns_name: str
+        :param dns_name: Name of the DNS
+        :return: JSON dns model or HTTP 404
+        :rtype: collections.OrderedDict
+        """
         health_controller = self._driver.manager.health_controller
 
         try:
@@ -54,14 +54,14 @@ class StorageHealthController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self, storage_name):
-        """GET.
-
-        Returns the health of storage
-
-        :param storage_name
-        :returns JSON storage model or HTTP 404
         """
 
+        Returns the health of storage
+        :type storage_name: str
+        :param storage_name: Name of the storage
+        :return: JSON storage model or HTTP 404
+        :rtype: collections.OrderedDict
+        """
         health_controller = self._driver.manager.health_controller
 
         try:
@@ -79,14 +79,14 @@ class DistributedTaskHealthController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self, distributed_task_name):
-        """GET.
-
-        Returns the health of distributed task manager
-
-        :param distributed_task_name
-        :returns JSON storage model or HTTP 404
         """
 
+        Returns the health of distributed task manager
+        :type distributed_task_name: str
+        :param distributed_task_name: Name of the distributed task
+        :return: JSON Distributed task model  or HTTP 404
+        :rtype: collections.OrderedDict
+        """
         health_controller = self._driver.manager.health_controller
 
         try:
@@ -103,7 +103,15 @@ class ProviderHealthController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self, provider_name):
-        """Returns the health of provider."""
+        """
+
+        Returns the health of provider
+        :type provider_name: str
+        :param provider_name: Name of the provider
+        :return: JSON provider model or HTTP 404
+        :rtype: collections.OrderedDict
+        """
+
 
         health_controller = self._driver.manager.health_controller
 
@@ -120,7 +128,12 @@ class HealthController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self):
-        """Returns the health of storage and providers."""
+        """
+        Returns the health of storage and providers
+        :return: JSON response or HTTP 503
+        :rtype: collections.OrderedDict
+        """
+
 
         health_controller = self._driver.manager.health_controller
 

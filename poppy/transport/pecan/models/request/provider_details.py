@@ -17,6 +17,19 @@ from poppy.model.helpers import provider_details
 
 
 def load_from_json(json_data):
+    """
+
+    Deserialize ProviderDetail object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import provider_details
+        ProviderDetail_obj = provider_details.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of ProviderDetail object related key, values
+    :return: ProviderDetail object loaded from json_data
+    :rtype: ProviderDetail
+
+    """
     access_urls = json_data.get("access_urls")
     error_info = json_data.get("error_info", )
     provider_service_id = json_data.get("id")

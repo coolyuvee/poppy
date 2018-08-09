@@ -18,6 +18,17 @@ from poppy.transport.pecan.models.request import rule
 
 
 def load_from_json(json_data):
+    """
+    Deserialize CachingRule object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import cachingrule
+        CachingRule_obj = cachingrule.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of CachingRule object related key, values
+    :return: CachingRule object loaded from json_data
+    :rtype: CachingRule
+    """
     name = json_data.get('name')
     ttl = json_data.get('ttl')
     rules = json_data.get('rules', [])

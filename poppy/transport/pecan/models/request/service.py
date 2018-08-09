@@ -24,6 +24,18 @@ from poppy.transport.pecan.models.request import restriction
 
 
 def load_from_json(json_data):
+    """
+
+    Deserialize Service object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import service
+        Service_obj = service.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of Service object related key, values
+    :return: Service object loaded from json_data
+    :rtype: Service
+    """
     service_id = json_data.get('service_id', uuid.uuid4())
 
     name = json_data.get("name")

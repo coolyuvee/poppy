@@ -20,7 +20,14 @@ except ImportError:           # pragma: no cover
 
 
 class Model(collections.OrderedDict):
-    'response class for Link.'
+    """
+
+    Serialize links.
+    Example:
+        from poppy.transport.pecan.models.response import link
+        link_obj = link.Model('href', 'rel')
+        return link_obj
+    """
     def __init__(self, href, rel):
         super(Model, self).__init__()
         self['href'] = href

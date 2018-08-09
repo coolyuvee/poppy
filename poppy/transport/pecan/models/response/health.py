@@ -22,6 +22,13 @@ from poppy.transport.pecan.models.response import link
 
 
 class DNSModel(collections.OrderedDict):
+    """
+
+    Serialize DNS Model.
+    Example:
+        from poppy.transport.pecan.models.response import health
+        return health.DNSModel(True)
+    """
     def __init__(self, is_alive):
         super(DNSModel, self).__init__()
 
@@ -32,6 +39,13 @@ class DNSModel(collections.OrderedDict):
 
 
 class StorageModel(collections.OrderedDict):
+    """
+
+    Serialize Storage Model.
+    Example:
+        from poppy.transport.pecan.models.response import health
+        return health.StorageModel(True)
+    """
     def __init__(self, is_alive):
         super(StorageModel, self).__init__()
 
@@ -42,6 +56,12 @@ class StorageModel(collections.OrderedDict):
 
 
 class DistributedTaskModel(collections.OrderedDict):
+    """
+    Serialize Distributed task Model.
+    Example:
+        from poppy.transport.pecan.models.response import health
+        return health.DistributedTaskModel(True)
+    """
     def __init__(self, is_alive):
         super(DistributedTaskModel, self).__init__()
 
@@ -52,6 +72,13 @@ class DistributedTaskModel(collections.OrderedDict):
 
 
 class ProviderModel(collections.OrderedDict):
+    """
+
+    Serialize Provider Model.
+    Example:
+        from poppy.transport.pecan.models.response import health
+        return health.ProviderModel(True)
+    """
     def __init__(self, is_alive):
         super(ProviderModel, self).__init__()
 
@@ -62,6 +89,13 @@ class ProviderModel(collections.OrderedDict):
 
 
 class HealthModel(collections.OrderedDict):
+    """
+
+    Serialize Health Model.
+    Example:
+        from poppy.transport.pecan.models.response import health
+        return health.HealthModel(True)
+    """
 
     def __init__(self, controller, health_map):
         super(HealthModel, self).__init__()

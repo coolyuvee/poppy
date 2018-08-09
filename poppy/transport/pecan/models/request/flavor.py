@@ -17,6 +17,18 @@ from poppy.model import flavor
 
 
 def load_from_json(json_data):
+    """
+
+    Deserialize Flavor object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import flavor
+        Flavor_obj = flavor.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of Flavor object related key, values
+    :return: Flavor object loaded from json_data
+    :rtype: Flavor
+    """
 
     flavor_id = json_data['id']
     providers = []

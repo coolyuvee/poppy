@@ -28,6 +28,10 @@ class PingController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self):
+        """
+        Ping the health controller
+        :return: Pecan response with http status 204 or 503
+        """
         health_controller = self._driver.manager.health_controller
         health_map, is_alive = health_controller.ping_check()
         if is_alive:

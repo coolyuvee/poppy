@@ -32,6 +32,12 @@ class PoppyRequestContext(context.RequestContext):
 class ContextHook(hooks.PecanHook):
 
     def before(self, state):
+        """
+
+        Pre-request validations for Pecan requests
+
+        :param state: Pecan request state
+        """
         context_kwargs = {}
 
         if 'X-Project-ID' in state.request.headers:

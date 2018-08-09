@@ -18,6 +18,17 @@ from poppy.model import ssl_certificate
 
 
 def load_from_json(json_data):
+    """
+    Deserialize Domain object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import domain
+        Domain_obj = domain.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of Domain object related key, values
+    :return: Domain object loaded from json_data
+    :rtype: Domain
+    """
     domain_name = json_data.get('domain')
     protocol = json_data.get('protocol', 'http')
     certification_option = json_data.get('certificate', None)

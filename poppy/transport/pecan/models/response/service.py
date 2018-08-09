@@ -30,7 +30,17 @@ from poppy.transport.pecan.models.response import restriction
 
 class Model(collections.OrderedDict):
 
-    """Service Response Model."""
+    """
+    Serialize a service object into an OrderedDict.
+    Can be used to send the service details back to client.
+
+    Example :
+        from poppy.model import service
+        from poppy.transport.pecan.models.response import service as service_response
+        service_obj = service.Service('Service id', 'name', ...)
+        return service_response.Model(service_obj, self)
+
+    """
 
     def __init__(self, service_obj, controller):
         super(Model, self).__init__()

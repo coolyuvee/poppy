@@ -26,5 +26,10 @@ class HomeController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get(self):
+        """
+
+        Root path for urls '/home/'
+        :return: A router to route the urls further
+        """
         home_controller = self._driver.manager.home_controller
         return home_controller.get()

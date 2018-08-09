@@ -17,6 +17,18 @@ from poppy.model import log_delivery as ld
 
 
 def load_from_json(json_data):
+    """
+
+    Deserialize LogDelivery object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import log_delivery
+        LogDelivery_obj = log_delivery.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of LogDelivery object related key, values
+    :return: LogDelivery object loaded from json_data
+    :rtype: LogDelivery
+    """
     enabled = json_data.get("enabled", False)
     result = ld.LogDelivery(enabled)
     return result

@@ -17,6 +17,18 @@ from poppy.model.helpers import rule
 
 
 def load_from_json(json_data):
+    """
+
+    Deserialize Rule object from JSON
+    Example :
+        from poppy.transport.pecan.models.request import rule
+        Rule_obj = rule.load_from_json({})
+
+    :type json_data: dict
+    :param json_data: Dictionary consisting of Rule object related key, values
+    :return: Rule object loaded from json_data
+    :rtype: Rule
+    """
     name = json_data.get('name', None)
     res = rule.Rule(name)
     res.referrer = json_data.get('referrer', None)

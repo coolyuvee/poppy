@@ -45,6 +45,12 @@ class SSLCertificateController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
+        """
+
+        Create a new SSL certificate
+        :return: Pecan response with http status 202 or 400
+        :rtype: pecan.Response
+        """
         ssl_certificate_controller = (
             self._driver.manager.ssl_certificate_controller)
 
@@ -72,6 +78,14 @@ class SSLCertificateController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def delete(self, domain_name):
+        """
+
+        Delete an SSL certificate for the domain
+        :type domain_name: str
+        :param domain_name: Name of the domain for which the certificates needs to be deleted
+        :return: Pecan response with http status code 202 or 400
+        :rtype: pecan.Response
+        """
         # For now we only support 'san' cert type
         cert_type = pecan.request.GET.get('cert_type', 'san')
 
@@ -94,7 +108,13 @@ class SSLCertificateController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def get_one(self, domain_name):
-
+        """
+        Get certificates for a domain name
+        :type domain_name: str
+        :param domain_name: Name of the domain
+        :return: Pecan response with 404  or list of JSON certificate model
+        :rtype: collections.OrderedDict
+        """
         certificate_controller = \
             self._driver.manager.ssl_certificate_controller
         total_cert_info = []
