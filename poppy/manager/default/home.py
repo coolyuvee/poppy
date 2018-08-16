@@ -80,8 +80,10 @@ class DefaultHomeController(base.HomeController):
         self.JSON_HOME = JSON_HOME
 
     def get(self):
-        """get.
+        """Get JSON text with all resources info.
 
-        :return json home
+        :return: The JSON text with services, flavors,
+          health and ping information
+        :rtype: dict[str, dict]
         """
         return self.JSON_HOME

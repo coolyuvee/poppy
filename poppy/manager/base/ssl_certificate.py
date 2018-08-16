@@ -31,9 +31,13 @@ class SSLCertificateController(controller.ManagerControllerBase):
     def create_ssl_certificate(self, project_id, cert_obj):
         """Create ssl certificate.
 
-       :param project_id
-       :param cert_obj
-       :raises: NotImplementedError
+       :param project_id: The project id
+       :type int
+
+       :param cert_obj: The certificate details
+       :type cert_obj: dict
+
+       :raise: NotImplementedError
        """
         raise NotImplementedError
 
@@ -41,10 +45,16 @@ class SSLCertificateController(controller.ManagerControllerBase):
     def delete_ssl_certificate(self, project_id, domain_name, cert_type):
         """Delete ssl certificate.
 
-        :param project_id
-        :param domain_name
-        :param cert_type
-       :raises: NotImplementedError
+        :param project_id: The project id
+        :type project_id: int
+
+        :param domain_name: The domain name
+        :type domain_name: str
+
+        :param cert_type: Type of the certificate
+        :type cert_type: str
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
@@ -52,8 +62,12 @@ class SSLCertificateController(controller.ManagerControllerBase):
     def get_certs_info_by_domain(self, domain_name, project_id):
         """Get ssl certificate by domain.
 
-        :param domain_name:
-        :param project_id:
-       :raises: NotImplementedError
+        :param domain_name: The domain name
+        :type domain_name: str
+
+        :param project_id: The project id
+        :type project_id: int
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError

@@ -29,9 +29,8 @@ class HomeControllerBase(controller.ManagerControllerBase):
 
     @abc.abstractmethod
     def get(self):
-        """get
+        """Get JSON text with all resources info.
 
-        :param self
         :raises: NotImplementedError
         """
         raise NotImplementedError

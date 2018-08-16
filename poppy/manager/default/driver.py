@@ -31,28 +31,69 @@ class DefaultManagerDriver(base.Driver):
 
     @decorators.lazy_property(write=True)
     def analytics_controller(self):
+        """Return the driver's analytics controller.
+
+        :return: Analytics controller
+        :rtype: poppy.manager.default.analytics.AnalyticsController
+        """
         return controllers.Analytics(self)
 
     @decorators.lazy_property(write=True)
     def services_controller(self):
+        """Return the driver's services controller.
+
+        :return: Services controller
+        :rtype: poppy.manager.default.services.DefaultServiceController
+        """
+
         return controllers.Services(self)
 
     @decorators.lazy_property(write=False)
     def home_controller(self):
+        """Return the driver's home controller.
+
+        :return: Home controller
+        :rtype: poppy.manager.default.home.DefaultHomeController
+        """
+
         return controllers.Home(self)
 
     @decorators.lazy_property(write=False)
     def flavors_controller(self):
+        """Return the driver's flavors controller.
+
+        :return: Flavors controller
+        :rtype: poppy.manager.default.flavors.DefaultFlavorsController
+        """
+
         return controllers.Flavors(self)
 
     @decorators.lazy_property(write=False)
     def health_controller(self):
+        """Return the driver's health controller.
+
+        :return: Health controller
+        :rtype: poppy.manager.default.health.DefaultHealthController
+        """
+
         return controllers.Health(self)
 
     @decorators.lazy_property(write=False)
     def background_job_controller(self):
+        """Return the driver's background controller.
+
+        :return: Background Job controller
+        :rtype: poppy.manager.default.background_job.BackgroundJobController
+        """
+
         return controllers.BackgroundJob(self)
 
     @decorators.lazy_property(write=False)
     def ssl_certificate_controller(self):
+        """Return the driver's SSL Certificate controller.
+
+        :return: SSL Certificate controller
+        :rtype: poppy.manager.default.ssl_certificate.DefaultSSLCertificateController
+        """
+
         return controllers.SSLCertificate(self)

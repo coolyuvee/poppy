@@ -50,6 +50,21 @@ class BackgroundJobController(base.BackgroundJobController):
         self.service_storage = self._driver.storage.services_controller
 
     def post_job(self, job_type, kwargs):
+        """Post job to the TaskFlow engine.
+
+        :param job_type: Type of the job. Valid types are : .
+          'akamai_check_and_update_cert_status' or
+          'akamai_update_papi_property_for_mod_san' or
+          'akamai_update_papi_property_for_mod_sni'
+        :type job_type: str
+
+        :param kwargs: Additional arguments for the task engine
+        :type kwargs: dict
+
+        :return: Tuple of run_list and ignore_list
+        :rtype: (list, list)
+        :raise: NotImplementedError if the job_type is not supported
+        """
         queue_data = []
 
         run_list = []
@@ -445,6 +460,11 @@ class BackgroundJobController(base.BackgroundJobController):
             )
 
     def get_san_mapping_list(self):
+        """Get items from SAN mapping list.
+
+        :return: List of SAN mapping items
+        :rtype: list
+        """
         res = []
         if 'akamai' in self._driver.providers:
             akamai_driver = self._driver.providers['akamai'].obj
@@ -455,6 +475,15 @@ class BackgroundJobController(base.BackgroundJobController):
         return res
 
     def put_san_mapping_list(self, san_mapping_list):
+        """Populate Akamai's san_mapping_queue with san_mapping_list.
+
+        :param san_mapping_list: The items to put into
+          Akamai's san_mapping_queue
+        :type san_mapping_list: list
+
+        :return: Tuple of old and new items in the Akamai san_mapping_queue
+        :rtype: (list, list)
+        """
         new_queue_data = [json.dumps(r) for r in san_mapping_list]
         res, deleted = [], []
         if 'akamai' in self._driver.providers:
@@ -473,6 +502,11 @@ class BackgroundJobController(base.BackgroundJobController):
         return res, deleted
 
     def delete_http_policy(self):
+        """Delete old http policies from Akamai's http_policy_queue.
+
+        :return: Tuple of deleted and ignored policies
+        :rtype: (list, list)
+        """
         http_policies = []
         run_list = []
         ignore_list = []

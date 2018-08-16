@@ -23,22 +23,22 @@ class SchemaBase(object):
 
     @classmethod
     def get_schema(cls, resource_name, operation):
-        """Returns the schema for an operation
+        """Returns the schema for an operation.
 
         :param resource_name: Operation for which resource need
-        to be validated.
-        :type operation: `six.text_type`
+          to be validated
+        :type resource_name: str
 
         :param operation: Operation for which params need
-        to be validated.
+          to be validated.
         :type operation: `six.text_type`
 
-        :returns: Operation's schema
+        :return: Operation's schema
         :rtype: dict
 
-        :raises: `errors.InvalidResource` if the resource
-        does not exist and `errors.InvalidOperation` if the operation
-        does not exist
+        :raise:
+          InvalidResource if the resource does not exist,
+          InvalidOperation if the operation does not exist
         """
         try:
             resource_schemas = cls.schema[resource_name]

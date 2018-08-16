@@ -23,9 +23,10 @@ class DefaultHealthController(health.HealthControllerBase):
         super(DefaultHealthController, self).__init__(manager)
 
     def health(self):
-        """health.
+        """Return the health of storage and providers.
 
-        :returns is_alive, health_map
+        :return: Tuple with is_alive and health_map info
+        :rtype:(bool, dict)
         """
 
         health_map, is_alive = self.ping_check()
@@ -53,6 +54,11 @@ class DefaultHealthController(health.HealthControllerBase):
         return is_alive, health_map
 
     def ping_check(self):
+        """Get the health_map and is_alive info.
+
+        :return: Tuple with is_alive and health_map info
+        :rtype:(bool, dict)
+        """
         health_map = {}
         is_alive = True
 
@@ -78,12 +84,28 @@ class DefaultHealthController(health.HealthControllerBase):
         return health_map, is_alive
 
     def is_provider_alive(self, provider_name):
-        """Returns the health of provider."""
+        """Returns the health of provider.
+
+        :param provider_name: The name of the provider
+        :type provider_name: str
+
+        :return: Whether the provider is alive
+        :rtype: bool
+        """
 
         return self._providers[provider_name].obj.is_alive()
 
     def is_distributed_task_alive(self, distributed_task_name):
-        """Returns the health of distributed_task."""
+        """Returns the health of distributed_task.
+
+        :param distributed_task_name: The name of the dist task
+        :type distributed_task_name: str
+
+        :return: Whether the distributed task is alive
+        :rtype: bool
+
+        :raise: KeyError if the distributed_task_name is not same as vendor name
+        """
 
         if distributed_task_name == self._distributed_task.vendor_name.lower():
             return self._distributed_task.is_alive()
@@ -91,7 +113,16 @@ class DefaultHealthController(health.HealthControllerBase):
             raise KeyError
 
     def is_storage_alive(self, storage_name):
-        """Returns the health of storage."""
+        """Returns the health of storage.
+
+        :param storage_name: The name of the storage
+        :type storage_name: str
+
+        :return: Whether storage is alive
+        :rtype: bool
+
+        :raise: KeyError if storage_name is not same as underlying storage
+        """
 
         if storage_name == self._storage.storage_name.lower():
             return self._storage.is_alive()
@@ -99,7 +130,16 @@ class DefaultHealthController(health.HealthControllerBase):
             raise KeyError
 
     def is_dns_alive(self, dns_name):
-        """Returns the health of DNS Provider."""
+        """Returns the health of DNS Provider.
+
+        :param dns_name: The name of the DNS
+        :type dns_name: str
+
+        :return: Whether the DNS is alive
+        :rtype: bool
+
+        :raise: KeyError if dns_name is not same as underlying DNS
+        """
 
         if dns_name == self._dns.dns_name.lower():
             return self._dns.is_alive()

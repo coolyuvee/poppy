@@ -23,6 +23,20 @@ LOG = log.getLogger(__name__)
 class AnalyticsController(base.AnalyticsController):
 
     def get_metrics_by_domain(self, project_id, domain_name, **extras):
+        """Get metrics information by domain.
+
+        :param project_id: The project id
+        :type project_id: int
+
+        :param domain_name: The domain name
+        :type domain_name: str
+
+        :param extras: kwargs
+        :type extras: dict
+
+        :return: Metrics captured for this domain
+        :rtype: dict
+        """
 
         storage_controller = self.storage_controller
         try:

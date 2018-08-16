@@ -20,7 +20,7 @@ from poppy.transport.validators import schema_base
 
 class SSLCertificateSchema(schema_base.SchemaBase):
 
-    '''JSON Schema validation for /ssl_certificate.'''
+    """JSON Schema validation for /ssl_certificate."""
 
     schema = {
         'ssl_certificate': {

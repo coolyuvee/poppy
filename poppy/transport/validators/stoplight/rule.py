@@ -28,9 +28,17 @@ def Rule(vfunc, on_error, getter=None):
     to happen.
 
     :param vfunc: The function used to validate this param
+    :type vfunc: function
+
     :param on_error: The function to call when an error is detected
-    :param value_src: The source from which the value can be
+    :type on_error: function
+
+    :param getter: The source from which the value can be
         This function should take a value as a field name
-        as a single param.
+        as a single param
+    :type getter: function
+
+    :return: A Validation rule object to validate
+    :rtype: ValidationRule
     """
     return ValidationRule(vfunc=vfunc, errfunc=on_error, getter=getter)

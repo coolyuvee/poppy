@@ -31,6 +31,12 @@ class BackgroundJobControllerBase(controller.ManagerControllerBase):
     def post_job(self, job_type, kwargs):
         """Posts a background job to the distributed task driver.
 
-        :raises: NotImplementedError
+        :param job_type: The job type
+        :type job_type: str
+
+        :param kwargs: Extra arguments for the task engine
+        :type kwargs: dict
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError

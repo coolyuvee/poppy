@@ -37,19 +37,34 @@ from poppy.transport.validators.stoplight import exceptions
 
 
 def req_accepts_json_pecan(request, desired_content_type='application/json'):
-    # Assume the transport is pecan for now
-    # for falcon the syntax should actually be:
-    # request.accept('application/json')
+    """Check the request's contentType is accepted or not.
+
+    pecan is the currently implemented web framework.
+    For Falcon use 'application/json'
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :param desired_content_type: The contentType of the request
+    :type desired_content_type: str
+
+    :raise: ValidationFailed if the contentType is not accepted
+    """
+
     if not request.accept(desired_content_type):
         raise exceptions.ValidationFailed('Invalid Accept Header')
 
 
 def custom_abort_pecan(errors_info):
-    """Error_handler for with_schema
+    """Error_handler for with_schema.
 
     Meant to be used with pecan transport.
 
-    param errors: a list of validation exceptions
+    :param errors_info: a list of validation exceptions
+    :type errors_info: list
+
+    :return: Pecan abort response with http status code 400
+    :rtype: pecan.abort
     """
     # TODO(tonytan4ever): gettext support
     details = dict(errors=[{'message': str(getattr(error, "message", error))}
@@ -66,11 +81,19 @@ def with_schema_pecan(request, schema=None, handler=custom_abort_pecan,
     """Decorate a Pecan/Flask style controller form validation.
 
     For an HTTP POST or PUT (RFC2616 unsafe methods) request, the schema is
-    used to validate the request body.
+    used to validate the request body
 
-    :param request: request object
-    :param schema: A JSON schema.
-    :param handler: A Function (Error_handler)
+    :param request: Web request
+    :type request: pecan.request
+
+    :param schema: JSON schema
+    :type schema: object
+
+    :param handler: Error_handler function
+    :type handler: function
+
+    :return: Decorator to validate the input JSON schema
+    :rtype: function
     """
     def decorator(f):
 
@@ -104,12 +127,31 @@ def with_schema_pecan(request, schema=None, handler=custom_abort_pecan,
 
 
 def json_matches_service_schema(input_schema):
+    """Check whether input JSON schema matches with service schema.
+
+    :param input_schema:  Input schema dictionary
+    :type input_schema: Dict[str, bool]
+
+    :return: New function with partial application of
+      this function and parameters
+    :rtype: functools.partial
+    """
     return functools.partial(
         json_matches_service_schema_inner,
         schema=input_schema)
 
 
 def json_matches_service_schema_inner(request, schema=None):
+    """Check whether input JSON schema matches with service schema.
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :param schema: Schema to verify
+    :type schema: dict
+
+    :raise: ValidationFailed if not a valid JSON string
+    """
     try:
         data = json.loads(request.body.decode('utf-8'))
     except ValueError:
@@ -119,12 +161,31 @@ def json_matches_service_schema_inner(request, schema=None):
 
 
 def json_matches_flavor_schema(input_schema):
+    """Check whether input JSON schema matches with flavor schema.
+
+    :param input_schema: Schema to verify
+    :type input_schema: dict
+
+    :return: New function with partial application of
+      this function and parameters
+    :rtype: functools.partial
+    """
     return functools.partial(
         json_matches_flavor_schema_inner,
         schema=input_schema)
 
 
 def json_matches_flavor_schema_inner(request, schema=None):
+    """Check whether input JSON schema matches with flavor schema.
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :param schema: Schema to verify
+    :type schema: dict
+
+    :raise: ValidationFailed if not a valid JSON schema
+    """
     try:
         data = json.loads(request.body.decode('utf-8'))
     except ValueError:
@@ -134,11 +195,27 @@ def json_matches_flavor_schema_inner(request, schema=None):
 
 
 def is_valid_shared_ssl_domain_name(domain_name):
+    """Check whether the domain name is a valid ssl shared domain.
+
+    :param domain_name: Name of the domain to check
+    :type domain_name: str
+
+    :return: True if valid, else False
+    :rtype: bool
+    """
     shared_ssl_domain_regex = '^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]?$'
     return re.match(shared_ssl_domain_regex, domain_name) is not None
 
 
 def is_valid_tld(domain_name):
+    """Check whether the domain name is a valid top level dir.
+
+    :param domain_name: Name of the domain to check
+    :type domain_name: str
+
+    :return: True if valid tld, else False
+    :rtype: bool
+    """
     try:
         status = whois.whois(domain_name)['status']
         if status is not None or status != '':
@@ -158,6 +235,15 @@ def is_valid_tld(domain_name):
 
 
 def is_valid_domain_name(domain_name):
+    """Check whether the domain name is a valid domain name.
+
+    :param domain_name: Name of the domain to check
+    :type domain_name: str
+
+    :return: True if valid name, else False
+    :rtype: bool
+    """
+
     # only allow ascii
     domain_regex = ('^((?=[a-z0-9-]{1,63}\.)[a-z0-9]+'
                     '(-[a-z0-9]+)*\.)+[a-z]{2,63}$')
@@ -168,6 +254,14 @@ def is_valid_domain_name(domain_name):
 
 
 def is_valid_domain(domain):
+    """Check whether the domain is a valid domain.
+
+   :param domain: Domain to check
+   :type domain: poppy.model.helpers.domain.Domain
+
+   :return: True if valid domain, else False
+   :rtype: bool
+   """
     domain_name = domain.get('domain')
     if (domain.get('protocol') == 'https' and
             domain['certificate'] == u'shared'):
@@ -177,6 +271,14 @@ def is_valid_domain(domain):
 
 
 def is_valid_ip_address(ip_address):
+    """Check whether ip_address is valid
+
+    :param ip_address: IP address to check
+    :type ip_address: str
+
+    :return: True if valid IP, else False
+    :rtype: bool
+    """
     ipv4_regex = ('^(((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]'
                   '|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$')
     # ipv6 is not used to validate origin since akamai does not support ipv6
@@ -199,12 +301,27 @@ def is_valid_ip_address(ip_address):
 
 
 def is_valid_origin(origin):
+    """Check whether origin is valid
+
+    :param origin: Origin to check
+    :type origin: poppy.model.helpers.origin.Origin
+
+    :return: True if valid Origin, else False
+    :rtype: bool
+    """
     return (is_valid_domain_name(origin.get('origin')) or
             is_valid_ip_address(origin.get('origin')))
 
 
 @decorators.validation_function
 def is_valid_project_id(project_id):
+    """Check whether Project id is valid
+
+    :param project_id: Project id to check
+    :type project_id: str
+
+    :raise: ValidationFailed if not a valid Project id
+    """
     project_id_regex = '^[a-zA-Z0-9_\\-\\.]{1,256}$'
     if not re.match(project_id_regex, project_id):
         raise exceptions.ValidationFailed('Invalid '
@@ -214,6 +331,13 @@ def is_valid_project_id(project_id):
 
 @decorators.validation_function
 def is_valid_akamai_setting(setting):
+    """Check whether setting is valid Akamai setting
+
+    :param setting: setting to check
+    :type setting: str
+
+    :raise: ValidationFailed if not a valid setting
+    """
     if setting not in ['san_cert_hostname_limit']:
         raise exceptions.ValidationFailed(
             'Invalid akamai setting : {0}'.format(setting)
@@ -222,6 +346,13 @@ def is_valid_akamai_setting(setting):
 
 @decorators.validation_function
 def is_valid_domain_by_name_or_akamai_setting(query):
+    """Check whether Valid domain by name ot setting.
+
+    :param query: The query to check
+    :type query: str
+
+    :raise: ValidationFailed if not valid
+    """
     valid_domain = True
     domain_exc = None
     valid_setting = True
@@ -244,6 +375,14 @@ def is_valid_domain_by_name_or_akamai_setting(query):
 
 
 def is_root_domain(domain):
+    """Check whether the domain is root domain.
+
+    :param domain: Domain to check
+    :type domain: poppy.model.helpers.domain.Domain
+
+    :return: True if root domain else False
+    :rtype: bool
+    """
     domain_name = domain.get('domain')
 
     # if the domain contains four or more segments, it a not a root domain
@@ -275,6 +414,16 @@ def is_root_domain(domain):
 
 
 def is_valid_service_configuration(service, schema):
+    """Check whether the service configuration is valid.
+
+    :param service: The service object
+    :type service: poppy.model.helpers.domain.Domain
+
+    :param schema: JSON schema
+    :type schema: dict
+
+    :raise: ValidationFailed if not a valid configuration
+    """
     errors_list = list()
     if schema is not None:
         errors_list = list(
@@ -492,6 +641,13 @@ def is_valid_service_configuration(service, schema):
 
 @decorators.validation_function
 def is_valid_service_id(service_id):
+    """Check service id is valid or not.
+
+    :param service_id: Service id to check
+    :type service_id: str
+
+    :raise: ValidationFailed if not a valid service id
+    """
     try:
         uuid.UUID(service_id)
     except ValueError:
@@ -500,6 +656,13 @@ def is_valid_service_id(service_id):
 
 @decorators.validation_function
 def is_valid_domain_by_name(domain_name):
+    """Check domain is valid by name
+
+    :param domain_name: Name of the domain
+    :type domain_name: str
+
+    :raise: ValidationFailed if not a valid domain
+    """
     domain_regex = ('^((?=[a-z0-9-]{1,63}\.)[a-z0-9]+'
                     '(-[a-z0-9]+)*\.)+[a-z]{2,63}$')
     # allow Punycode
@@ -525,6 +688,13 @@ def is_valid_domain_by_name(domain_name):
 
 @decorators.validation_function
 def is_valid_provider_url(request):
+    """Check Provider url is valid or not.
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :raise: ValidationFailed if not a valid provider url
+    """
 
     provider_url = request.GET.get("provider_url", None)
     if not provider_url:
@@ -548,6 +718,16 @@ def is_valid_provider_url(request):
 
 
 def is_valid_flavor_configuration(flavor, schema):
+    """Check Flavor configuration is valid or not.
+
+    :param flavor: Flavor details
+    :type flavor: poppy.model.flavor.Flavor
+
+    :param schema: JSON schema
+    :type schema: dict
+
+    :raise: ValidationFailed if not a valid flavor configuration
+    """
     if schema is not None:
         errors_list = list(
             jsonschema.Draft3Validator(schema).iter_errors(flavor))
@@ -571,6 +751,13 @@ def is_valid_flavor_id(flavor_id):
 
 @decorators.validation_function
 def is_valid_analytics_request(request):
+    """Check Analytics request is valid or not.
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :raise: ValidationFailed if not a valid analytics request
+    """
     default_end_time = datetime.datetime.utcnow()
     default_start_time = (datetime.datetime.utcnow()
                           - datetime.timedelta(days=1))
@@ -630,6 +817,13 @@ def is_valid_analytics_request(request):
 
 @decorators.validation_function
 def is_valid_service_status(request):
+    """Check service status is valid or not.
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :raise: ValidationFailed if not a valid service status
+    """
     status = request.GET.get('status', "")
 
     # NOTE(TheSriram): The statuses listed below are the currently
@@ -655,6 +849,13 @@ def is_valid_service_status(request):
 
 @decorators.validation_function
 def is_valid_certificate_status(request):
+    """Check certificate status is valid or not.
+
+    :param request: Web request
+    :type request: pecan.request
+
+    :raise: ValidationFailed if not a valid certificate status
+    """
     status = request.GET.get('status', "")
 
     # NOTE(TheSriram): The statuses listed below are the currently
@@ -679,6 +880,14 @@ def is_valid_certificate_status(request):
 
 
 def abort_with_message(error_info):
+    """Pecan's abort web response utility.
+
+    :param error_info: Error information
+    :type error_info: dict
+
+    :return: Pecan web response with http status code 400
+    :rtype: pecan.abort
+    """
     pecan.abort(400, detail=util.help_escape(
                 getattr(error_info, "message", "")),
                 headers={'Content-Type': "application/json"})

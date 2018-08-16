@@ -34,7 +34,7 @@ class HealthControllerBase(controller.ManagerControllerBase):
 
     @abc.abstractmethod
     def health(self):
-        """Returns the health of storage and providers
+        """Returns the health of storage and providers.
 
         :raises: NotImplementedError
         """
@@ -42,36 +42,44 @@ class HealthControllerBase(controller.ManagerControllerBase):
 
     @abc.abstractmethod
     def is_provider_alive(self, provider_name):
-        """Returns the health of provider
+        """Returns the health of provider.
 
-        :param provider_name
+        :param provider_name: The provider name
+        :type provider_name: str
+
         :raises: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def is_distributed_task_alive(self, distributed_task_name):
-        """Returns the health of distributed_task
+        """Returns the health of distributed_task.
 
-        :param distributed_task_name
+        :param distributed_task_name: The task name
+        :type distributed_task_name: str
+
         :raises: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def is_dns_alive(self, dns_name):
-        """Returns the health of DNS Provider
+        """Returns the health of DNS Provider.
 
-        :param dns_name
+        :param dns_name: The DNS name
+        :type dns_name: str
+
         :raises: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def is_storage_alive(self, storage_name):
-        """Returns the health of storage
+        """Returns the health of storage.
 
-        :param storage_name
+        :param storage_name: The name of the storage
+        :type storage_name: str
+
         :raises: NotImplementedError
         """
         raise NotImplementedError

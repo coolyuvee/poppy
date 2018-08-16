@@ -30,22 +30,41 @@ class AnalyticsController(controller.ManagerControllerBase):
 
     @property
     def storage_controller(self):
+        """Return storage controller.
+
+        :return:  Storage controller
+        :rtype: poppy.storage.cassandra.services.ServicesController
+        """
         return self.manager.storage.services_controller
 
     @property
     def providers(self):
+        """Return provider module.
+
+        :return: Provider module
+        :rtype: poppy.provider.akamai
+        """
         return self.manager.providers
 
     @property
     def metrics_controller(self):
+        """Return metrics controller.
+
+        :return:  Metrics controller
+        :rtype: poppy.metrics.blueflood.services.ServicesController
+        """
         return self.manager.metrics.services_controller
 
     @abc.abstractmethod
     def get_metrics_by_domain(self, project_id, domain_name, **extras):
-        """get analytics metrics by domain
+        """Get analytics metrics by domain.
 
-       :param project_id
-       :param domain_name
+       :param project_id: The project id
+       :type project_id: int
+
+       :param domain_name: The domain name
+       :type domain_name: str
+
        :raises: NotImplementedError
        """
         raise NotImplementedError

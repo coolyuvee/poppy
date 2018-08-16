@@ -32,52 +32,60 @@ class FlavorsControllerBase(controller.ManagerControllerBase):
 
     @property
     def storage(self):
-        """storage
+        """Return StorageController for this FlavorController.
 
-        :returns: the storage object
+        :return: The storage object
         """
         return self._storage
 
     @property
     def providers(self):
-        """storage
+        """Get list of providers for this FlavorController.
 
-        :returns: the list of provider drivers
+        :return: The list of provider drivers
         """
         return self._providers
 
     @abc.abstractmethod
     def list(self):
-        """list
+        """Get list of the supported flavors.
 
-        :raises: NotImplementedError
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def get(self, flavor_id):
-        """GET
+        """Get Flavor details for the given flavor id
 
-        :param flavor_id
-        :raises: NotImplementedError
+        :param flavor_id: Flavor id to get the flavor details
+        :type flavor_id: str
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def add(self, flavor):
-        """POST
+        """Add a new flavor.
 
-        :param flavor
-        :raises: NotImplementedError
+        :param flavor: Flavor details
+        :type flavor: poppy.model.flavor.Flavor
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def delete(self, flavor_id, provider_id):
-        """DELETE
+        """Delete a flavor.
 
-        :param flavor_id
-        :param provider_id
-        :raises: NotImplementedError
+        :param flavor_id: The flavor id to delete
+        :type flavor_id: str
+
+        :param provider_id: The provider id of the flavor
+        :type provider_id: str
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError

@@ -36,10 +36,16 @@ class ServicesControllerBase(controller.ManagerControllerBase):
     def get_services(self, project_id, marker=None, limit=None):
         """Get a list of services.
 
-        :param project_id
-        :param marker
-        :param limit
-        :raises: NotImplementedError
+        :param project_id: The project id
+        :type project_id: str
+
+        :param marker: The marker indicator
+        :type marker: int
+
+        :param limit: No of services to fetch
+        :type limit: int
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
@@ -47,20 +53,30 @@ class ServicesControllerBase(controller.ManagerControllerBase):
     def get_service(self, project_id, service_id):
         """Get a service.
 
-        :param project_id
-        :param service_id
-        :raises: NotImplementedError
+        :param project_id: The project id
+        :type project_id: int
+
+        :param service_id: The service id
+        :type service_id: str
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def create_service(self, project_id, auth_token, service_obj):
-        """Create a service.
+        """Create a new service.
 
-        :param project_id
-        :param auth_token
-        :param service_obj
-        :raises: NotImplementedError
+        :param project_id: The project id
+        :type project_id: int
+
+        :param auth_token: Token for the authorization
+        :type auth_token: str
+
+        :param service_obj: The new service details
+        :type service_obj: dict
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
@@ -69,32 +85,52 @@ class ServicesControllerBase(controller.ManagerControllerBase):
                        auth_token, service_updates, force_update=False):
         """Update a service.
 
-        :param project_id
-        :param service_id
-        :param auth_token
-        :param service_updates
-        :param force_update
-        :raises: NotImplementedError
+        :param project_id: The project id
+        :type project_id: int
+
+        :param service_id: The service id
+        :type service_id: str
+
+        :param auth_token: Token for the authorization
+        :type auth_token: str
+
+        :param service_updates: To be updated details
+        :type service_updates: dict
+
+        :param force_update: (Default False) Force update
+        :type force_update: bool
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError
 
     @abc.abstractmethod
     def services_action(self, project_id, action, domain=None):
-        """services_action
+        """Perform an action on services.
 
-        :param project_id
-        :param action
-        :param domain
-        :raises ValueError
+        :param project_id: The project id
+        :type project_id: int
+
+        :param action: Choose from 'delete', 'enable', 'disable'
+        :type action: str
+
+        :param domain: The domain name
+        :type domain: str
+
+        :raise: ValueError
         """
 
     @abc.abstractmethod
     def delete_service(self, project_id, service_id):
         """Delete a service.
 
-       :param project_id
-       :param service_id
-       :raises: NotImplementedError
+       :param project_id: The project id
+       :type project_id: int
+
+       :param service_id: The service id
+       :type service_id: str
+
+       :raise: NotImplementedError
        """
         raise NotImplementedError
 
@@ -104,9 +140,18 @@ class ServicesControllerBase(controller.ManagerControllerBase):
 
         If purge_url is none, all content of this service will be purged.
 
-        :param project_id
-        :param service_id
-        :param hard
-        :param purge_url
+        :param project_id: The project id
+        :type project_id: int
+
+        :param service_id: The service id
+        :type service_id: str
+
+        :param hard: (Default False) Changes provider's status to
+          'update_in_progress' if True
+
+        :param purge_url: The purge URL
+        :type purge_url: str
+
+        :raise: NotImplementedError
         """
         raise NotImplementedError

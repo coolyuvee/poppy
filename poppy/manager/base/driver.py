@@ -33,47 +33,72 @@ class ManagerDriverBase(object):
 
     @property
     def conf(self):
-        """conf
+        """Return the configuration for the driver.
 
-        :returns conf
+        :return: Configuration
+        :rtype: dict
         """
         return self._conf
 
     @property
     def storage(self):
-        """storage
+        """Return the storage module for the driver.
 
-        :returns storage
+        :return: Storage module
+        :rtype: poppy.storage.cassandra
         """
         return self._storage
 
     @property
     def providers(self):
-        """providers
+        """Return the provider module for the driver.
 
-        :returns providers
+        :return: Providers module
+        :rtype: poppy.provider.akamai
         """
         return self._providers
 
     @property
     def dns(self):
+        """Return the dns module for the driver.
+
+        :return: DNS module
+        :rtype: poppy.provider.dns
+        """
         return self._dns
 
     @property
     def distributed_task(self):
+        """Return the distributed_task module for the driver.
+
+        :return: distributed_task module
+        :rtype: poppy.provider.distributed_task
+        """
         return self._distributed_task
 
     @property
     def notification(self):
+        """Return the notification module for the driver.
+
+        :return: notification module
+        :rtype: poppy.provider.notification
+        """
+
         return self._notification
 
     @property
     def metrics(self):
+        """Return the metrics module for the driver.
+
+        :return: metrics module
+        :rtype: poppy.provider.metrics
+        """
+
         return self._metrics
 
     @abc.abstractproperty
     def analytics_controller(self):
-        """Returns the driver's analytics controller
+        """Return the driver's analytics controller.
 
         :raises NotImplementedError
         """
@@ -81,7 +106,7 @@ class ManagerDriverBase(object):
 
     @abc.abstractproperty
     def services_controller(self):
-        """Returns the driver's services controller
+        """Return the driver's services controller.
 
         :raises NotImplementedError
         """
@@ -89,7 +114,7 @@ class ManagerDriverBase(object):
 
     @abc.abstractproperty
     def flavors_controller(self):
-        """Returns the driver's flavors controller
+        """Return the driver's flavors controller.
 
         :raises NotImplementedError
         """
@@ -97,7 +122,7 @@ class ManagerDriverBase(object):
 
     @abc.abstractproperty
     def health_controller(self):
-        """Returns the driver's health controller
+        """Return the driver's health controller.
 
         :raises NotImplementedError
         """

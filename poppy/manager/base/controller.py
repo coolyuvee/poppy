@@ -32,4 +32,8 @@ class ManagerControllerBase(object):
 
     @property
     def driver(self):
+        """Return the instance of the driver
+
+        :return: Driver's instance
+        """
         return self._driver
