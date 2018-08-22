@@ -50,20 +50,28 @@ class BackgroundJobController(base.BackgroundJobController):
         self.service_storage = self._driver.storage.services_controller
 
     def post_job(self, job_type, kwargs):
-        """Post job to the TaskFlow engine.
+        """Submit a task to the TaskFlow engine.
 
-        :param job_type: Type of the job. Valid types are : .
-          'akamai_check_and_update_cert_status' or
-          'akamai_update_papi_property_for_mod_san' or
-          'akamai_update_papi_property_for_mod_sni'
-        :type job_type: str
+        Iterate over each certificate in san mapping queue.
+        For each job type, build run_list and ignore_list of certificates
+        based on some logic while submitting jobs for those certificates
+        belonging to the run_list. San mapping queue may not be intact depending
+        on the job type. Return both run_list and ignore_list.
 
-        :param kwargs: Additional arguments for the task engine
-        :type kwargs: dict
+        Valid job_type includes.
+          - akamai_check_and_update_cert_status
+          - akamai_update_papi_property_for_mod_san
+          - akamai_update_papi_property_for_mod_sni
+
+        Example return : ``([run_list],[ignore_list])``
+
+        :param str job_type: Type of the job
+        :param dict kwargs: Additional arguments
 
         :return: Tuple of run_list and ignore_list
         :rtype: (list, list)
-        :raise: NotImplementedError if the job_type is not supported
+
+        :raises NotImplementedError: if the job_type is not supported
         """
         queue_data = []
 
@@ -460,7 +468,7 @@ class BackgroundJobController(base.BackgroundJobController):
             )
 
     def get_san_mapping_list(self):
-        """Get items from SAN mapping list.
+        """Get items from SAN mapping queue.
 
         :return: List of SAN mapping items
         :rtype: list
@@ -475,13 +483,11 @@ class BackgroundJobController(base.BackgroundJobController):
         return res
 
     def put_san_mapping_list(self, san_mapping_list):
-        """Populate Akamai's san_mapping_queue with san_mapping_list.
+        """Populate san_mapping_queue with new data.
 
-        :param san_mapping_list: The items to put into
-          Akamai's san_mapping_queue
-        :type san_mapping_list: list
+        :param list san_mapping_list: The new data
 
-        :return: Tuple of old and new items in the Akamai san_mapping_queue
+        :return: Tuple of old and new items in the san_mapping_queue
         :rtype: (list, list)
         """
         new_queue_data = [json.dumps(r) for r in san_mapping_list]
@@ -502,7 +508,16 @@ class BackgroundJobController(base.BackgroundJobController):
         return res, deleted
 
     def delete_http_policy(self):
-        """Delete old http policies from Akamai's http_policy_queue.
+        """Submit task to delete Provider's(Akamai's) obsolete http policies.
+
+        Get all the http_policies available from the provider's policy queue
+        by consuming the queue (meaning queue will be empty after consume). For
+        each consumed policy, get certificates by domain. If the certificates are
+        empty for a domain, add that policy to ignore_list. If the certificate
+        status is not yet deployed, then add that policy to ignore_list and put it
+        back to policy queue so that it can be consumed in a later trial. Put rest
+        of the policies into run_list and submit a task to delete these policies.
+        Return ignored_list and run_list.
 
         :return: Tuple of deleted and ignored policies
         :rtype: (list, list)

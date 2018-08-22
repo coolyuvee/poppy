@@ -26,7 +26,7 @@ class DefaultFlavorsController(base.FlavorsController):
     def list(self):
         """Get list of the supported flavors.
 
-        :return: List of the supported flavors.
+        :return: List of the supported flavors
         :rtype: list
         """
         return self.storage.list()
@@ -34,8 +34,7 @@ class DefaultFlavorsController(base.FlavorsController):
     def get(self, flavor_id):
         """Return flavor details.
 
-        :param flavor_id: The flavor id
-        :type flavor_id: str
+        :param unicode flavor_id: The flavor id
 
         :return: Flavor details
         :rtype: poppy.model.flavor.Flavor
@@ -52,7 +51,7 @@ class DefaultFlavorsController(base.FlavorsController):
           provider details
         :rtype: poppy.model.flavor.Flavor
 
-        :raise: ValueError if the flavor already exists
+        :raises ValueError: if the flavor already exists
         """
         provider_list = self.driver.conf[bootstrap._DRIVER_GROUP].providers
 
@@ -68,10 +67,6 @@ class DefaultFlavorsController(base.FlavorsController):
     def delete(self, flavor_id):
         """Delete an existing flavor.
 
-        :param flavor_id: The flavor id to delete
-        :type flavor_id: str
-
-        :return: None
-        :rtype: None
+        :param unicode flavor_id: The flavor id to delete
         """
         return self.storage.delete(flavor_id)

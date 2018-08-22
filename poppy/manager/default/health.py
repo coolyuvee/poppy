@@ -23,9 +23,11 @@ class DefaultHealthController(health.HealthControllerBase):
         super(DefaultHealthController, self).__init__(manager)
 
     def health(self):
-        """Return the health of storage and providers.
+        """Returns health status of all the modules.
 
-        :return: Tuple with is_alive and health_map info
+        :return: A health_map dict with health information about dns, providers,
+          distributed_task and storage modules along with is_alive indicator(
+           ``True if all the modules are alive, False if one of the module is not alive.``)
         :rtype:(bool, dict)
         """
 
@@ -54,9 +56,14 @@ class DefaultHealthController(health.HealthControllerBase):
         return is_alive, health_map
 
     def ping_check(self):
-        """Get the health_map and is_alive info.
+        """Get health for storage and distributed_task.
 
-        :return: Tuple with is_alive and health_map info
+        Get the health_map dict and is_alive info for distributed_task
+        and storage modules.
+
+        :return: A health_map dict with health information about distributed_task
+          and storage modules along with is_alive indicator(
+           ``True if all the modules are alive, False if one of the module is not alive.``)
         :rtype:(bool, dict)
         """
         health_map = {}
@@ -84,27 +91,23 @@ class DefaultHealthController(health.HealthControllerBase):
         return health_map, is_alive
 
     def is_provider_alive(self, provider_name):
-        """Returns the health of provider.
+        """Check a provide is alive or not.
 
-        :param provider_name: The name of the provider
-        :type provider_name: str
-
-        :return: Whether the provider is alive
+        :param str provider_name: The name of the provider
+        :return: True if alive, otherwise False
         :rtype: bool
         """
 
         return self._providers[provider_name].obj.is_alive()
 
     def is_distributed_task_alive(self, distributed_task_name):
-        """Returns the health of distributed_task.
+        """Check distributed_task is alive or not.
 
-        :param distributed_task_name: The name of the dist task
-        :type distributed_task_name: str
-
-        :return: Whether the distributed task is alive
+        :param str distributed_task_name: The name of the dist task
+        :return: True if alive, otherwise False
         :rtype: bool
 
-        :raise: KeyError if the distributed_task_name is not same as vendor name
+        :raises KeyError: if the distributed_task_name is not same as vendor name
         """
 
         if distributed_task_name == self._distributed_task.vendor_name.lower():
@@ -113,15 +116,13 @@ class DefaultHealthController(health.HealthControllerBase):
             raise KeyError
 
     def is_storage_alive(self, storage_name):
-        """Returns the health of storage.
+        """Check storage is alive or not.
 
-        :param storage_name: The name of the storage
-        :type storage_name: str
-
-        :return: Whether storage is alive
+        :param str storage_name: The name of the storage
+        :return: True if alive, otherwise False
         :rtype: bool
 
-        :raise: KeyError if storage_name is not same as underlying storage
+        :raises KeyError: if storage_name is not same as underlying storage
         """
 
         if storage_name == self._storage.storage_name.lower():
@@ -130,15 +131,13 @@ class DefaultHealthController(health.HealthControllerBase):
             raise KeyError
 
     def is_dns_alive(self, dns_name):
-        """Returns the health of DNS Provider.
+        """Check DNS is alive or not.
 
-        :param dns_name: The name of the DNS
-        :type dns_name: str
-
-        :return: Whether the DNS is alive
+        :param str dns_name: The name of the DNS
+        :return: True if alive, otherwise False
         :rtype: bool
 
-        :raise: KeyError if dns_name is not same as underlying DNS
+        :raise KeyError: if dns_name is not same as underlying DNS
         """
 
         if dns_name == self._dns.dns_name.lower():

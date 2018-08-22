@@ -47,20 +47,15 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
             self, project_id, cert_obj, https_upgrade=False):
         """Create a new certificate.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param cert_obj: The certificate details
-        :type cert_obj: dict
-
-        :param https_upgrade: (Default False)
+        :param unicode project_id: The project id
+        :param dict cert_obj: The certificate details
+        :param bool https_upgrade: (Default False)
           Whether ot not to be upgraded to https
-        :type https_upgrade: bool
 
         :return: kwargs with wrapped arguments
         :rtype: dict
 
-        :raise: ValueError if if domain is not a valid non-root domain
+        :raises ValueError: if if domain is not a valid non-root domain
         """
 
         if (not validators.is_valid_domain_name(cert_obj.domain_name)) or \
@@ -105,19 +100,14 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def delete_ssl_certificate(self, project_id, domain_name, cert_type):
         """Delete an SSL certificate.
 
-        :param project_id: The project id
-        :type project_id: int
+        :param unicode project_id: The project id
+        :param unicode domain_name: The name of the domain
+        :param unicode cert_type: Type of the certificate to be deleted
 
-        :param domain_name: The name of the domain
-        :type domain_name: str
-
-        :param cert_type: Type of the certificate to be deleted
-        :type cert_type: str
-
-        :return: kwargs with cert, provider and other original inputs
+        :return: dict with cert, provider and other original inputs
         :rtype: dict
 
-        :raise: LookupError if the flavor is not found
+        :raises LookupError: if the flavor is not found
         """
         cert_obj = self.storage.get_certs_by_domain(
             domain_name, cert_type=cert_type)
@@ -145,16 +135,13 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def get_certs_info_by_domain(self, domain_name, project_id):
         """Get the certificates information by domain.
 
-        :param domain_name: Name of the domain
-        :type domain_name: str
-
-        :param project_id: The project id
-        :type project_id: int
+        :param unicode domain_name: Name of the domain
+        :param unicode project_id: The project id
 
         :return: SSLCertificate object
         :rtype: poppy.model.ssl_certificate.SSLCertificate
 
-        :raise: ValueError if cert info is not found
+        :raises ValueError: if cert info is not found
         """
         try:
             certs_info = self.storage.get_certs_by_domain(
@@ -170,9 +157,9 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
             raise e
 
     def get_san_retry_list(self):
-        """Get items from san_mapping_queue for Akamai provider.
+        """Get items from san_mapping_queue of provider.
 
-        :return: san_mapping_queue of Akamai provider
+        :return: san_mapping_queue of provider
         :rtype: dict
         """
         if 'akamai' in self._driver.providers:
@@ -193,16 +180,14 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         ]
 
     def update_san_retry_list(self, queue_data_list):
-        """Update Akamai mod_san_queue with new items.
+        """Update provider's mod_san_queue with new items.
 
-        :param queue_data_list: The list of new items to update to.
-        :type queue_data_list: list
-
-        :return: tuple of lists of old and new items in Akamai mod_san_queue
+        :param list queue_data_list: The list of new items to update with.
+        :return: tuple of lists of old and new items in mod_san_queue
         :rtype: (list, list)
-        :raise:
-          LookupError if domain does not exists,
-          ValueError if certificate already exists
+
+        :raises LookupError: if domain does not exists
+        :raises ValueError: if certificate already exists
         """
         for r in queue_data_list:
             service_obj = self.service_storage\
@@ -242,12 +227,18 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         return res, deleted
 
     def rerun_san_retry_list(self):
-        """Rerun the mod_san_queue.
+        """Retry the mod san queue.
 
-        :return: Tuple of lists containing the run items and ignored items
+        Obtain the items from mod san queue and build run_list and
+        ignore_list by iterating through this retry queue. For each
+        certificate in the run_list, submit a task to recreate the
+        ssl certificate.
+
+        :return: list of certificates that were recreated and list of
+          certificates that were ignored
         :rtype: (list, list)
 
-        :raise: LookupError if the flavor is not found
+        :raises LookupError: if the flavor is not found
         """
         run_list = []
         ignore_list = []
@@ -381,13 +372,12 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def get_san_cert_configuration(self, san_cert_name):
         """Get SAN certificate configuration.
 
-        :param san_cert_name: Name of the SAN certificate
-        :type san_cert_name: str
+        :param unicode san_cert_name: Name of the SAN certificate
 
         :return: Configuration of the certificate
         :rtype: dict
 
-        :raise: ValueError if not a valid certificate name
+        :raises ValueError: if not a valid certificate name
         """
         if 'akamai' in self._driver.providers:
             akamai_driver = self._driver.providers['akamai'].obj
@@ -407,18 +397,14 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def update_san_cert_configuration(self, san_cert_name, new_cert_config):
         """Update configuration of SAN certificate.
 
-        :param san_cert_name: Name of the SAN certificate
-        :type san_cert_name: str
-
-        :param new_cert_config: New configuration to update with.
-        :type new_cert_config: dict
+        :param unicode san_cert_name: Name of the SAN certificate
+        :param dict new_cert_config: New configuration to update with.
 
         :return: The updated values of the certificate
         :rtype: dict
 
-        :raise:
-          ValueError if not a valid certificate,
-          RuntimeError if unable to call SPS api
+        :raises ValueError: if not a valid certificate
+        :raises RuntimeError: if unable to call SPS api
         """
         if 'akamai' in self._driver.providers:
             akamai_driver = self._driver.providers['akamai'].obj
@@ -457,9 +443,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def get_sni_cert_configuration(self, cert_name):
         """Get configuration for SNI certificates.
 
-        :param cert_name: The name of the SNI certificate
-        :type cert_name: str
-
+        :param unicode cert_name: The name of the SNI certificate
         :return: SNI certificate configuration
         :rtype: dict
         """
@@ -476,11 +460,8 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def update_sni_cert_configuration(self, cert_name, new_cert_config):
         """Update SNI certificate's configuration.
 
-        :param cert_name: SNI certificate name
-        :type cert_name: str
-
-        :param new_cert_config: New configuration to update with
-        :type new_cert_config: dict
+        :param unicode cert_name: SNI certificate name
+        :param dict new_cert_config: New configuration to update with
 
         :return: The updated configuration of the certificate
         :rtype: dict
@@ -501,7 +482,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def get_san_cert_hostname_limit(self):
         """Get SAN certificate hostname limit.
 
-        :return: Limit for the SAN cert hostnames
+        :return: Limit for the SAN cert host names
         :rtype: int
         """
         if 'akamai' in self._driver.providers:
@@ -518,13 +499,10 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def _validate_sni_cert_name(provider_driver, cert_name):
         """Check whether a valid SNI certificate name.
 
-        :param provider_driver: The provider driver
-        :type provider_driver: object
+        :param object provider_driver: The provider driver
+        :param unicode cert_name: The name of the SNI certificate
 
-        :param cert_name: The name of the SNI certificate
-        :type cert_name: str
-
-        :raise: ValueError if not a valid SNI certificate name
+        :raises ValueError: if not a valid SNI certificate name
         """
         if cert_name not in provider_driver.sni_cert_cnames:
             raise ValueError(
@@ -535,8 +513,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def set_san_cert_hostname_limit(self, request_json):
         """Set hostname limit for SAN certificate.
 
-        :param request_json: Dict containing the required limit
-        :type request_json: dict
+        :param dict request_json: Dict containing the required limit
 
         :return: The updated limit value
         :rtype: int
@@ -563,8 +540,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def get_certs_by_status(self, status):
         """Get certificates by their status
 
-        :param status: Status of the certficate to look for
-        :type status: str
+        :param unicode status: Status of the certificate to look for
 
         :return: Certificate details
         :rtype: dict
@@ -576,15 +552,11 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
     def update_certificate_status(self, domain_name, certificate_updates):
         """Update a certificate status.
 
-        :param domain_name: The domain name
-        :type domain_name: str
+        :param unicode domain_name: The domain name
+        :param dict certificate_updates: New status of the cert to update with
 
-        :param certificate_updates: New status of the cert to update with
-        :type certificate_updates: dict
-
-        :raise:
-          ValueError if no certificate found,
-          CertificateStatusUpdateError if unable to update certificate status
+        :raises ValueError: if no certificate found
+        :raises CertificateStatusUpdateError: if unable to update certificate status
         """
         certificate_old = self.storage.get_certs_by_domain(domain_name)
         if not certificate_old:

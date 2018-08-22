@@ -65,7 +65,7 @@ class DefaultServicesController(base.ServicesController):
     def determine_sleep_times(self):
         """Calculate sleep times used in rebind.
 
-        :return: Time in seconds to sleep
+        :return: Time to sleep
         :rtype: list
         """
 
@@ -79,18 +79,14 @@ class DefaultServicesController(base.ServicesController):
         return backoff
 
     def _get_provider_details(self, project_id, service_id):
-        """Return Provider details.
+        """Return Provider details for given project and service ids.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param service_id: The service id
-        :type service_id: str
-
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
         :return: Provider details for the given project and service ids
         :rtype: Dict[str, poppy.model.helpers.provider_details.ProviderDetail]
 
-        :raise: LookupError if the service does not exists
+        :raises LookupError: if the service does not exists
         """
         try:
             provider_details = self.storage_controller.get_provider_details(
@@ -102,15 +98,13 @@ class DefaultServicesController(base.ServicesController):
         return provider_details
 
     def get_service_by_domain_name(self, domain_name):
-        """Return service details for the domain.
+        """Return service details for given domain name.
 
-        :param domain_name: The domain name
-        :type domain_name: str
-
+        :param unicode domain_name: The domain name
         :return: The service details
         :rtype: poppy.model.service.Service
 
-        :raise: LookupError if the domain does not exists
+        :raises LookupError: if the domain does not exists
           or service details can not be found for the domain
         """
         try:
@@ -127,11 +121,9 @@ class DefaultServicesController(base.ServicesController):
         return service_details
 
     def get_services_by_status(self, status):
-        """Return the services by status
+        """Return the services by status.
 
-        :param status: The status of the service
-        :type status: str
-
+        :param unicode status: The status of the service
         :return: List of services
         :rtype: list
         """
@@ -142,11 +134,9 @@ class DefaultServicesController(base.ServicesController):
         return services_project_ids
 
     def get_domains_by_provider_url(self, provider_url):
-        """Return domains by Provider url
+        """Return domains by Provider url.
 
-        :param provider_url: The provider URL
-        :type provider_url: str
-
+        :param unicode provider_url: The provider URL
         :return: List of domains
         :rtype: list
         """
@@ -157,16 +147,13 @@ class DefaultServicesController(base.ServicesController):
         return domains
 
     def _append_defaults(self, service_json, operation='create'):
-        """ Add defaults to the service.
+        """Add defaults to the service.
 
         If the service rules are None or Empty, add default rule.
         If the operation is 'create', add default ttl and cache.
 
-        :param service_json: Service details in JSON form
-        :type service_json: dict
-
-        :param operation: (Default 'create') Name of operation
-        :type operation: str
+        :param dict service_json: Service details in JSON form
+        :param str operation: (Default 'create') Name of operation
         """
         # default origin rule
         for origin in service_json.get('origins', []):
@@ -205,16 +192,11 @@ class DefaultServicesController(base.ServicesController):
                 caching_entry['rules'].append(default_rule.to_dict())
 
     def get_services(self, project_id, marker=None, limit=None):
-        """Get a list of services.
+        """Get list of services.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param marker: The marker indicator
-        :type marker: int
-
-        :param limit: No of services to fetch
-        :type limit: int
+        :param unicode project_id: The project id
+        :param int marker: The marker indicator
+        :param int limit: No of services to fetch
 
         :return: List of services
         :rtype: list(poppy.model.service.Service)
@@ -224,11 +206,8 @@ class DefaultServicesController(base.ServicesController):
     def get_service(self, project_id, service_id):
         """Get a service object.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param service_id: The service id
-        :type service_id: str
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
 
         :return: The service object
         :rtype: poppy.model.services.Service
@@ -238,21 +217,15 @@ class DefaultServicesController(base.ServicesController):
     def create_service(self, project_id, auth_token, service_json):
         """Create a new service.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param auth_token: Token for authorization
-        :type auth_token: str
-
-        :param service_json: The service details to create
-        :type service_json: dict
+        :param unicode project_id: The project id
+        :param unicode auth_token: Token for authorization
+        :param dict service_json: The service details to create
 
         :return: The new service object created
         :rtype: poppy.model.service.Service
 
-        :raise:
-          LookupError if the flavor does not exists,
-          ValueError if shared domain retry ops has problem
+        :raises LookupError: if the flavor does not exists
+        :raises ValueError: if shared domain retry ops has problem
         """
         try:
             flavor = self.flavor_controller.get(service_json.get('flavor_id'))
@@ -331,28 +304,17 @@ class DefaultServicesController(base.ServicesController):
                        auth_token, service_updates, force_update=False):
         """Update a service.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param service_id: The service id
-        :type service_id: str
-
-        :param auth_token: Token for authorization
-        :type auth_token: str
-
-        :param service_updates: The service details
-        :type service_updates: dict
-
-        :param force_update: (Default False) Forceful update \
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
+        :param unicode auth_token: Token for authorization
+        :param dict service_updates: The service details
+        :param bool force_update: (Default False) Forceful update \
           of the service
-        :type force_update: bool
 
-        :raise:
-           ServiceNotFound if service not found,
-           ServiceStatusDisabled if service id disabled,
-           ServiceStatusNeitherDeployedNorFailed
-             if service is neither deployed not failed
-
+        :raises ServiceNotFound: if service not found
+        :raises ServiceStatusDisabled: if service is disabled
+        :raises ServiceStatusNeitherDeployedNorFailed: if force_update
+          is False and service is neither deployed nor failed
         """
         # get the current service object
         try:
@@ -571,13 +533,10 @@ class DefaultServicesController(base.ServicesController):
         return
 
     def services_limit(self, project_id, limit):
-        """Set limit for no of services.
+        """Set limit for number of services.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param limit: No of services
-        :type limit: int
+        :param unicode project_id: The project id
+        :param int limit: No of services
         """
         self.storage_controller.set_service_limit(
             project_id=project_id,
@@ -587,17 +546,10 @@ class DefaultServicesController(base.ServicesController):
                                      auth_token, status):
         """Set provider details for service.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param service_id: The service id
-        :type service_id: str
-
-        :param auth_token: Token for authorization
-        :type auth_token: str
-
-        :param status: Status of the service
-        :type status: str
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
+        :param unicode auth_token: Token for authorization
+        :param str status: Status of the service
 
         :return: Http status code 201 or 202
         :rtype: int
@@ -624,8 +576,7 @@ class DefaultServicesController(base.ServicesController):
     def get_services_limit(self, project_id):
         """Get the currently set limit on services.
 
-        :param project_id: The project id
-        :type project_id: int
+        :param unicode project_id: The project id
 
         :return: The dict with limit's value
         :rtype: dict[str, int]
@@ -640,14 +591,14 @@ class DefaultServicesController(base.ServicesController):
     def _action_per_service_obj(self, project_id, action, service_obj):
         """Perform an action on the service.
 
-        :param project_id: The project id
-        :type project_id: int
+        List of actions include
+         - delete
+         - enable
+         - disable
 
-        :param action: Choose from 'delete', 'enable', 'disable'
-        :type action: str
-
-        :param service_obj: The service object
-        :type service_obj: dict
+        :param unicode project_id: The project id
+        :param str action: Action needs to be done
+        :param dict service_obj: The service object
         """
 
         kwargs = {
@@ -687,14 +638,14 @@ class DefaultServicesController(base.ServicesController):
     def services_action(self, project_id, action, domain=None):
         """perform action on services present in this domain.
 
-        :param project_id: The project id
-        :type project_id: int
+        List of actions include
+         - delete
+         - enable
+         - disable
 
-        :param action: Choose from 'delete', 'enable', 'disable'
-        :type action: str
-
-        :param domain: The name of the domain
-        :type domain: str
+        :param unicode project_id: The project id
+        :param str action: Action needs to done
+        :param unicode domain: The name of the domain
         """
 
         # list all the services of for this project_id
@@ -729,13 +680,13 @@ class DefaultServicesController(base.ServicesController):
         return
 
     def delete_service(self, project_id, service_id):
-        """Delete a service.
+        """Submit a task to delete a service.
 
-        :param project_id: The project id
-        :type project_id: int
+        Before deletion, update each of the provider's status in
+        service with 'delete_in_progress'
 
-        :param service_id: The service id
-        :type service_id: str
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
         """
         service_obj = self.storage_controller.get_service(
             project_id, service_id)
@@ -771,22 +722,19 @@ class DefaultServicesController(base.ServicesController):
     def purge(self, project_id, service_id, hard=False, purge_url=None):
         """Purge a service.
 
-        If purge_url is none, all content of this service will be purge.
+        If purge_url is none, all content of this service will be purged.
 
-        :param project_id: The project id
-        :type project_id: int
+        If ``hard`` is False, status of the each provider details
+        will be set to 'update_in_progress'
 
-        :param service_id: The service id
-        :type service_id: str
-
-        :param hard: (Default False) Mark 'update_in_progress' \
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
+        :param bool hard: (Default False) Mark 'update_in_progress' \
            if set to True
-        :type hard: bool
+        :param unicode purge_url: The purge url
 
-        :param purge_url: The purge url
-        :type purge_url: str
-
-        :raise: ServiceStatusNotDeployed if service not yet deployed
+        :raises ServiceStatusNotDeployed: if service not yet deployed
+        :raises LookupError: if the service does not exists
         """
         try:
             service_obj = self.storage_controller.get_service(
@@ -837,16 +785,13 @@ class DefaultServicesController(base.ServicesController):
     def _generate_shared_ssl_domain(self, domain_name, store):
         """Generate shared ssl domain.
 
-        :param domain_name: The domain name
-        :type domain_name: str
-
-        :param store: The store object
-        :type store: object
+        :param unicode domain_name: The domain name
+        :param unicode store: uuid
 
         :return: Shared ssl domain
-        :rtype: str
+        :rtype: unicode
 
-        :raise: SharedShardsExhausted if domain has already been taken
+        :raises SharedShardsExhausted: if domain has already been taken
         """
         try:
             if not hasattr(self, store):
@@ -877,17 +822,12 @@ class DefaultServicesController(base.ServicesController):
     def _pick_shared_ssl_domain(self, domain, service_id, store):
         """Select an available shared ssl domain.
 
-        :param domain: The domain name
-        :type domain: str
-
-        :param service_id: The service id
-        :type service_id: str
-
-        :param store: The store object
-        :type store: object
+        :param unicode domain: The domain name
+        :param unicode service_id: The service id
+        :param unicode store: uuid
 
         :return: The available domain
-        :rtype: str
+        :rtype: unicode
         """
         shared_ssl_domain = self._generate_shared_ssl_domain(
             domain,
@@ -903,19 +843,14 @@ class DefaultServicesController(base.ServicesController):
     def _shard_retry(self, project_id, service_obj, store=None):
         """Retry to get available ssl domain and add to service.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param service_obj: the service object
-        :type service_obj: dict
-
-        :param store: The store object
-        :type store: object
+        :param unicode project_id: The project id
+        :param dict service_obj: the service object
+        :param unicode store: The store object
 
         :return: The service object with shared ssl domain added
         :rtype: dict
 
-        :raise: ValueError
+        :raises ValueError:
         """
         # deal with shared ssl domains
         try:
@@ -940,22 +875,20 @@ class DefaultServicesController(base.ServicesController):
 
     def migrate_domain(self, project_id, service_id, domain_name, new_cert,
                        cert_status='deployed'):
-        """Migrate domain
+        """Migrate domain.
 
-        :param project_id: The project id
-        :type project_id: int
+        Domain migration includes
+         - Set cert_status to all the provider's domain_certification
+         - Update the all the certificates with cert_status
+         - Update the access_url of all the providers with new_cert
 
-        :param service_id: The service id
-        :type service_id: str
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
+        :param unicode domain_name: The domain name
+        :param unicode new_cert: The new certificate
+        :param unicode cert_status: (Default 'deployed')Certificate status
 
-        :param domain_name: The domain name
-        :type domain_name: str
-
-        :param new_cert: The new certificate
-        :type new_cert: str
-
-        :param cert_status: (Default 'deployed')Certificate status
-        :type cert_status: str
+        :raises ServiceNotFound: if the service not found
         """
         dns_controller = self.dns_controller
         storage_controller = self.storage_controller
@@ -1026,11 +959,8 @@ class DefaultServicesController(base.ServicesController):
     def _detect_upgrade_http_to_https(self, old_domains, new_domain):
         """Determine whether upgrade is required from http to https.
 
-        :param old_domains: List of old domains
-        :type old_domains: list
-
-        :param new_domain: New domain
-        :type new_domain: str
+        :param list old_domains: List of old domains
+        :param unicode new_domain: New domain
 
         :return: Boolean value indicating upgrade is required or not
         :rtype: bool
@@ -1050,14 +980,9 @@ class DefaultServicesController(base.ServicesController):
             self, project_id, service_id, access_url_changes):
         """Update access url of a service.
 
-        :param project_id: The project id
-        :type project_id: int
-
-        :param service_id: The service id
-        :type service_id: str
-
-        :param access_url_changes: The changes to update the access url
-        :type access_url_changes: dict
+        :param unicode project_id: The project id
+        :param unicode service_id: The service id
+        :param dict access_url_changes: The changes to update the access url
 
         :return: Whether or not the access url details updated
         :rtype: bool
