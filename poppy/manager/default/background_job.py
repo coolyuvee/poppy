@@ -50,10 +50,10 @@ class BackgroundJobController(base.BackgroundJobController):
         self.service_storage = self._driver.storage.services_controller
 
     def post_job(self, job_type, kwargs):
-        """Submit a task to the TaskFlow engine.
+        """Submit a job to the Job board.
 
         Iterate over each certificate in san mapping queue.
-        For each job type, build run_list and ignore_list of certificates
+        For each job type, build ``run_list`` and ``ignore_list`` of certificates
         based on some logic while submitting jobs for those certificates
         belonging to the run_list. San mapping queue may not be intact depending
         on the job type. Return both run_list and ignore_list.
@@ -63,13 +63,26 @@ class BackgroundJobController(base.BackgroundJobController):
           - akamai_update_papi_property_for_mod_san
           - akamai_update_papi_property_for_mod_sni
 
-        Example return : ``([run_list],[ignore_list])``
+        .. code-block:: python
+
+            (
+                [
+                    {
+                        "domain_name": "one.example.com",
+                        "project_id": "000",
+                        "flavor_id": "cdn",
+                        "cert_type": "sni"
+                    }
+                ],
+                []
+            )
+
 
         :param str job_type: Type of the job
         :param dict kwargs: Additional arguments
 
         :return: Tuple of run_list and ignore_list
-        :rtype: (list, list)
+        :rtype: tuple(list, list)
 
         :raises NotImplementedError: if the job_type is not supported
         """
@@ -483,12 +496,12 @@ class BackgroundJobController(base.BackgroundJobController):
         return res
 
     def put_san_mapping_list(self, san_mapping_list):
-        """Populate san_mapping_queue with new data.
+        """Override san_mapping_queue with new certificate objects.
 
-        :param list san_mapping_list: The new data
+        :param list san_mapping_list: New certificates
 
-        :return: Tuple of old and new items in the san_mapping_queue
-        :rtype: (list, list)
+        :return: Tuple of new and deleted certs in the san_mapping_queue
+        :rtype: tuple(list, list)
         """
         new_queue_data = [json.dumps(r) for r in san_mapping_list]
         res, deleted = [], []
@@ -520,7 +533,7 @@ class BackgroundJobController(base.BackgroundJobController):
         Return ignored_list and run_list.
 
         :return: Tuple of deleted and ignored policies
-        :rtype: (list, list)
+        :rtype: tuple(list, list)
         """
         http_policies = []
         run_list = []

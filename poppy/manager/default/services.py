@@ -65,7 +65,7 @@ class DefaultServicesController(base.ServicesController):
     def determine_sleep_times(self):
         """Calculate sleep times used in rebind.
 
-        :return: Time to sleep
+        :return: List of times to sleep using exponential backoff
         :rtype: list
         """
 
@@ -123,6 +123,13 @@ class DefaultServicesController(base.ServicesController):
     def get_services_by_status(self, status):
         """Return the services by status.
 
+        Currently supported statuses include:
+         - create_in_progress
+         - deployed
+         - update_in_progress
+         - delete_in_progress
+         - failed
+
         :param unicode status: The status of the service
         :return: List of services
         :rtype: list
@@ -152,7 +159,7 @@ class DefaultServicesController(base.ServicesController):
         If the service rules are None or Empty, add default rule.
         If the operation is 'create', add default ttl and cache.
 
-        :param dict service_json: Service details in JSON form
+        :param dict service_json: Service object represented as a dict
         :param str operation: (Default 'create') Name of operation
         """
         # default origin rule
@@ -195,8 +202,8 @@ class DefaultServicesController(base.ServicesController):
         """Get list of services.
 
         :param unicode project_id: The project id
-        :param int marker: The marker indicator
-        :param int limit: No of services to fetch
+        :param int marker: Starting position of the pagination
+        :param int limit: Number of services to fetch
 
         :return: List of services
         :rtype: list(poppy.model.service.Service)
@@ -225,7 +232,7 @@ class DefaultServicesController(base.ServicesController):
         :rtype: poppy.model.service.Service
 
         :raises LookupError: if the flavor does not exists
-        :raises ValueError: if shared domain retry ops has problem
+        :raises ValueError: if shard domain retry operation has problem
         """
         try:
             flavor = self.flavor_controller.get(service_json.get('flavor_id'))
@@ -307,7 +314,7 @@ class DefaultServicesController(base.ServicesController):
         :param unicode project_id: The project id
         :param unicode service_id: The service id
         :param unicode auth_token: Token for authorization
-        :param dict service_updates: The service details
+        :param list service_updates: The service details
         :param bool force_update: (Default False) Forceful update \
           of the service
 
@@ -533,7 +540,7 @@ class DefaultServicesController(base.ServicesController):
         return
 
     def services_limit(self, project_id, limit):
-        """Set limit for number of services.
+        """Set limit for number of services for a given project.
 
         :param unicode project_id: The project id
         :param int limit: No of services
@@ -544,7 +551,7 @@ class DefaultServicesController(base.ServicesController):
 
     def set_service_provider_details(self, project_id, service_id,
                                      auth_token, status):
-        """Set provider details for service.
+        """Set provider details for a given service.
 
         :param unicode project_id: The project id
         :param unicode service_id: The service id
@@ -574,7 +581,7 @@ class DefaultServicesController(base.ServicesController):
         return 201
 
     def get_services_limit(self, project_id):
-        """Get the currently set limit on services.
+        """Get the currently set limit on services for a given project.
 
         :param unicode project_id: The project id
 
@@ -598,7 +605,8 @@ class DefaultServicesController(base.ServicesController):
 
         :param unicode project_id: The project id
         :param str action: Action needs to be done
-        :param dict service_obj: The service object
+        :param service_obj: The service object
+        :type service_obj: poppy.model.service.Service
         """
 
         kwargs = {
@@ -637,6 +645,10 @@ class DefaultServicesController(base.ServicesController):
 
     def services_action(self, project_id, action, domain=None):
         """perform action on services present in this domain.
+
+        If domain is None, The action is performed on all the
+        services for a project. Else, the action will be
+        performed on those services present in the given domain.
 
         List of actions include
          - delete
@@ -720,7 +732,14 @@ class DefaultServicesController(base.ServicesController):
         return
 
     def purge(self, project_id, service_id, hard=False, purge_url=None):
-        """Purge a service.
+        """Purge the contents of a service.
+
+        Example purge_urls (from least specific to most specific):
+        - Whole-site wildcard, such as ``/*``
+        - URL path, such as ``/images/*``
+        - Detailed URL path, such as ``/images/logos/partnerA/*``
+        - File extension, such as ``/*.png``
+
 
         If purge_url is none, all content of this service will be purged.
 
@@ -844,11 +863,13 @@ class DefaultServicesController(base.ServicesController):
         """Retry to get available ssl domain and add to service.
 
         :param unicode project_id: The project id
-        :param dict service_obj: the service object
+        :param service_obj: The service object
+        :type service_obj: poppy.model.service.Service
+
         :param unicode store: The store object
 
         :return: The service object with shared ssl domain added
-        :rtype: dict
+        :rtype: poppy.model.service.Service
 
         :raises ValueError:
         """
@@ -881,6 +902,12 @@ class DefaultServicesController(base.ServicesController):
          - Set cert_status to all the provider's domain_certification
          - Update the all the certificates with cert_status
          - Update the access_url of all the providers with new_cert
+
+        As of now, below are the supported statuses.
+         - create_in_progress
+         - deployed
+         - failed
+         - cancelled
 
         :param unicode project_id: The project id
         :param unicode service_id: The service id
@@ -959,8 +986,11 @@ class DefaultServicesController(base.ServicesController):
     def _detect_upgrade_http_to_https(self, old_domains, new_domain):
         """Determine whether upgrade is required from http to https.
 
-        :param list old_domains: List of old domains
-        :param unicode new_domain: New domain
+        :param old_domains: List of old domains
+        :type old_domains: list(poppy.model.helpers.domain.Domain)
+
+        :param new_domain: New domain
+        :type new_domain: poppy.model.helpers.domain.Domain
 
         :return: Boolean value indicating upgrade is required or not
         :rtype: bool
@@ -980,18 +1010,19 @@ class DefaultServicesController(base.ServicesController):
             self, project_id, service_id, access_url_changes):
         """Update access url of a service.
 
+        This is typically called from admin APIs only.
+
         :param unicode project_id: The project id
         :param unicode service_id: The service id
         :param dict access_url_changes: The changes to update the access url
 
-        :return: Whether or not the access url details updated
+        :return: ``True`` if the access urls is successfully updated
         :rtype: bool
 
-        :raise:
-          ValueError if the domain could not found on the service,
-          ServiceNotFound if service is not found,
-          InvalidOperation if the domain is shared ssl,
-          InvalidResourceName if the access url or domain is invalid
+        :raises ValueError: if the domain could not found on the service,
+        :raises ServiceNotFound: if service is not found,
+        :raises InvalidOperation: if the domain is shared ssl,
+        :raises InvalidResourceName: if the access url or domain is invalid
         """
         try:
             service_old = self.storage_controller.get_service(

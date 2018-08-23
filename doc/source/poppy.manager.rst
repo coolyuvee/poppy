@@ -65,3 +65,14 @@
     :members:
     :undoc-members:
     :show-inheritance:
+
+
+.. automodule:: poppy.manager.default.background_job
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: poppy.manager.default.health
+    :members:
+    :undoc-members:
+    :show-inheritance:

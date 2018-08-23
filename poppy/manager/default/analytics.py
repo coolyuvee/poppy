@@ -25,7 +25,7 @@ class AnalyticsController(base.AnalyticsController):
     def get_metrics_by_domain(self, project_id, domain_name, **extras):
         """Gets metrics information for a domain.
 
-        The below keys are expected in **extras along with their values.
+        The below keys are expected in ``extras`` along with their values.
          - metricType
          - startTime
          - endTime

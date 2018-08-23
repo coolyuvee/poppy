@@ -25,10 +25,20 @@ class DefaultHealthController(health.HealthControllerBase):
     def health(self):
         """Returns health status of all the modules.
 
-        :return: A health_map dict with health information about dns, providers,
-          distributed_task and storage modules along with is_alive indicator(
-           ``True if all the modules are alive, False if one of the module is not alive.``)
-        :rtype:(bool, dict)
+        A health_map dict with health information about dns, providers,
+        distributed_task and storage modules along with is_alive indicator(
+        ``True if all the modules are alive,``
+        ``False if any one of the module is not alive.``)
+
+        This API may be slow in giving response depending on the provider
+        as it needs to hit the provider's API to fetch the health info.
+
+        If you only  need to check the status of ``distributed_task``
+        and/or ``storage``, you can use :meth:`ping_check()`, as it provides
+        a subset of the ``health_map`` and is generally much faster.
+
+        :return: is_alive and dict of health info
+        :rtype: tuple(bool, dict)
         """
 
         health_map, is_alive = self.ping_check()
@@ -58,13 +68,10 @@ class DefaultHealthController(health.HealthControllerBase):
     def ping_check(self):
         """Get health for storage and distributed_task.
 
-        Get the health_map dict and is_alive info for distributed_task
-        and storage modules.
+        For more details, refer to :meth:`health` .
 
-        :return: A health_map dict with health information about distributed_task
-          and storage modules along with is_alive indicator(
-           ``True if all the modules are alive, False if one of the module is not alive.``)
-        :rtype:(bool, dict)
+        :return: is_alive and health_map dict
+        :rtype: tuple(bool, dict)
         """
         health_map = {}
         is_alive = True
@@ -91,20 +98,20 @@ class DefaultHealthController(health.HealthControllerBase):
         return health_map, is_alive
 
     def is_provider_alive(self, provider_name):
-        """Check a provide is alive or not.
+        """Check if provider is alive.
 
         :param str provider_name: The name of the provider
-        :return: True if alive, otherwise False
+        :return: ``True`` if alive, otherwise ``False``
         :rtype: bool
         """
 
         return self._providers[provider_name].obj.is_alive()
 
     def is_distributed_task_alive(self, distributed_task_name):
-        """Check distributed_task is alive or not.
+        """Check if distributed_task is alive.
 
         :param str distributed_task_name: The name of the dist task
-        :return: True if alive, otherwise False
+        :return: ``True`` if alive, otherwise ``False``
         :rtype: bool
 
         :raises KeyError: if the distributed_task_name is not same as vendor name
@@ -116,10 +123,10 @@ class DefaultHealthController(health.HealthControllerBase):
             raise KeyError
 
     def is_storage_alive(self, storage_name):
-        """Check storage is alive or not.
+        """Check if storage is alive.
 
         :param str storage_name: The name of the storage
-        :return: True if alive, otherwise False
+        :return: ``True`` if alive, otherwise ``False``
         :rtype: bool
 
         :raises KeyError: if storage_name is not same as underlying storage
@@ -131,10 +138,10 @@ class DefaultHealthController(health.HealthControllerBase):
             raise KeyError
 
     def is_dns_alive(self, dns_name):
-        """Check DNS is alive or not.
+        """Check if DNS is alive.
 
         :param str dns_name: The name of the DNS
-        :return: True if alive, otherwise False
+        :return: ``True`` if alive, otherwise ``False``
         :rtype: bool
 
         :raise KeyError: if dns_name is not same as underlying DNS
