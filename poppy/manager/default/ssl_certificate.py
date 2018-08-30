@@ -196,7 +196,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
 
         :param list queue_data_list: The list of new items to update with.
         :return: tuple of lists of old and new items in mod_san_queue
-        :rtype: (list, list)
+        :rtype: tuple(list, list)
 
         :raises LookupError: if domain does not exists
         :raises ValueError: if certificate already exists
@@ -495,7 +495,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         """Get SAN certificate hostname limit.
 
         :return: Limit for the SAN cert host names
-        :rtype: int
+        :rtype: dict
         """
         if 'akamai' in self._driver.providers:
             akamai_driver = self._driver.providers['akamai'].obj
@@ -555,8 +555,8 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
 
         :param unicode status: Status of the certificate to look for
 
-        :return: Certificate details
-        :rtype: dict
+        :return: List of certificates matching the status
+        :rtype: list
         """
         certs_by_status = self.storage.get_certs_by_status(status)
 
