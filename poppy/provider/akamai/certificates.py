@@ -12,7 +12,6 @@
 # implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import copy
 import datetime
 import json
@@ -26,43 +25,149 @@ LOG = log.getLogger(__name__)
 
 
 class CertificateController(base.CertificateBase):
+    """Create and Delete certificates of types SAN and SNI.
 
+    This class uses Akamai's SPS (Secure Provisioning Service)
+    and CPS (Certificate Provisioning System) APIs to create
+    and delete the certificates.
+
+    SPS is used by poppy to add domain names to a SAN certificate.
+    CPS can manage the entire life cycle of certificates.
+    Currently, we use CPS for the creation and deletion of
+    SNI (domain validated) certificates.
+
+    CPS and SPS APIs are async in nature; when you call
+    the api, the service responds with an ID, which can
+    be used to track the status of the request.
+
+    Both the CPS and SPS uses ``enrollmentId`` to identify
+    the certificates. The enrollmentId returned by SPS can be
+    used as input for the CPS and vice versa.
+    """
     @property
     def mod_san_queue(self):
+        """Return mod san queue.
+
+        :return: mod san queue
+        :rtype: poppy.provider.akamai.mod_san_queue.zookeeper_queue.ZookeeperModSanQueue
+        """
         return self.driver.mod_san_queue
 
     @property
     def san_cert_cnames(self):
+        """Return configured SAN certificate names
+
+        :return: List of configured SAN certificate names
+        :rtype: list
+        """
         return self.driver.san_cert_cnames
 
     @property
     def sni_cert_cnames(self):
+        """Return configured SNI certificate names
+
+        :return: List of configured SNI certificate names
+        :rtype: list
+        """
         return self.driver.sni_cert_cnames
 
     @property
     def cert_info_storage(self):
+        """Return the storage where certificates info is stored.
+
+        :return: The storage module
+        :rtype: poppy.provider.akamai.cert_info_storage.cassandra_storage.CassandraSanInfoStorage
+        """
         return self.driver.cert_info_storage
 
     @property
     def san_mapping_queue(self):
+        """Return san mapping queue.
+
+        :return: san mapping queue
+        :rtype: poppy.provider.akamai.domain_san_mapping_queue.zk_san_mapping_queue.ZookeeperSanMappingQueue
+        """
         return self.driver.san_mapping_queue
 
     @property
     def sps_api_client(self):
+        """Return SPS API client.
+
+        :return: SPS API client
+        :rtype: requests.Session
+        """
         return self.driver.akamai_sps_api_client
 
     @property
     def cps_api_client(self):
+        """Return CPS API client.
+
+        :return: CPS API client
+        :rtype: requests.Session
+        """
         return self.driver.akamai_cps_api_client
 
     def __init__(self, driver):
         super(CertificateController, self).__init__(driver)
-
         self.driver = driver
         self.sps_api_base_url = self.driver.akamai_sps_api_base_url
         self.cps_api_base_url = self.driver.akamai_cps_api_base_url
 
     def create_certificate(self, cert_obj, enqueue=True, https_upgrade=False):
+        """Create SSL certificate for a given cert object.
+
+        Certificate will be created if:
+
+            - Domain name does not already exists on the SAN/SNI certificates
+            - There is an available SAN certificate from the configured list
+                - The certificate is not disabled
+                - Number of Hosts is within the configured hostname limit
+                - Last SPS request status for that available SAN certificate is \
+                    SPS Request Complete
+
+        For SNI certificates, refer to :meth:`create_sni_certificate()`.
+
+        The SPS API is async. To track the status of the request,
+        store and use ``spsId`` returned by the API.
+
+        Example Return:
+
+        .. code-block:: python
+
+            {
+                "akamai": {
+                    'cert_domain': 'secure1.san1.altcdn.com',
+                    'extra_info': {
+                                    'status': 'create_in_progress',
+                                    'san cert': 'secure1.san1.altcdn.com',
+                                    'akamai_spsId': 12345,
+                                    'created_at': str(datetime.datetime.now()),
+                                    'action': 'Waiting for customer domain '
+                                              'validation for abc.example.com'
+                                   }
+                }
+            }
+
+        :param cert_obj: Certificate details
+        :type cert_obj: poppy.model.ssl_certificate.SSLCertificate
+
+        :param bool enqueue: (Default True) If ``True`` proceed
+          to add this certificate details to ``mod san queue`` and return.
+          Creation of the cert will be deferred to a later time.
+          Else, Go on and create the certificate.
+
+        :param bool https_upgrade: (Default False)
+          Indicates that the domain was upgraded from HTTP to HTTPS
+          and acts as a reminder to delete any obsolete HTTP policies
+          to be deleted If and only If both ``enqueue`` and ``https_upgrade``
+          set to ``True``. Ignored if ``False``.
+
+        :return: A dictionary with certificate domain and extra info
+          about the status of the certificate creation
+        :rtype: dict
+
+        :raises RuntimeError: If the SPS request failed
+        """
         if cert_obj.cert_type == 'san':
             try:
                 found, found_cert = (
@@ -310,7 +415,12 @@ class CertificateController(base.CertificateBase):
             })
 
     def _check_domain_already_exists_on_san_certs(self, domain_name):
-        """Check all configured san certs for domain."""
+        """Check if given domain name exists in the list of san certs configured.
+
+        :param unicode domain_name: The name of the domain
+        :return: Tuple of found value and its matching cert name if found.
+        :rtype: tuple(bool, unicode or None)
+        """
 
         found = False
         found_cert = None
@@ -331,7 +441,12 @@ class CertificateController(base.CertificateBase):
         return found, found_cert
 
     def _check_domain_already_exists_on_sni_certs(self, domain_name):
-        """Check all configured sni certs for domain."""
+        """Check if given domain name exists in the list of sni certs configured.
+
+        :param unicode domain_name: The name of the domain
+        :return: Tuple of found value and its matching cert name if found.
+        :rtype: tuple(bool, unicode or None)
+        """
 
         found = False
         found_cert = None
@@ -345,6 +460,64 @@ class CertificateController(base.CertificateBase):
         return found, found_cert
 
     def create_sni_certificate(self, cert_obj, enqueue, https_upgrade):
+        """Create SNI certificates.
+
+        Uses CPS API to create SNI.
+
+        Certificate will be created if,
+            - Domain name does not already exists on the SNI certificates
+            - ``enqueue`` is set to False
+
+        For SNI certificates, Choose any of the available SNI certificate from
+        the configured list of SNI certificates and if there are no previous
+        ``pending changes`` then proceed to submit a new CPS request.
+
+        For SAN certificates, refer to :meth:`create_certificate()`.
+
+        Depending on the type and impact of change, The response from
+        CPS will vary. HTTP 202 may returned for operations that require
+        a new cert creation and network deployment. In such cases, store
+        the certificate details into enqueue_san_mapping for future checks.
+        HTTP 200 may be returned if the operation does not require a new
+        certificate.
+
+        Example Return :
+
+        .. code-block:: python
+
+            {
+                "akamai": {
+                    'cert_domain': 'secured1.sni1.altcdn.com',
+                    'extra_info': {
+                                    'status': 'create_in_progress',
+                                    'san cert': 'secured1.sni1.altcdn.com',
+                                    'change_url': '/cps/v2/enrollments/10002/changes/10002',
+                                    'created_at': str(datetime.datetime.now()),
+                                    'action': 'Waiting for customer domain '
+                                              'validation for abc.example.com'
+                                   }
+                }
+            }
+
+        :param cert_obj: Certificate details
+        :type cert_obj: poppy.model.ssl_certificate.SSLCertificate
+
+        :param bool enqueue: (Default True) If ``True`` proceed
+          to add this request to ``mod san queue`` and return.
+          Else, Go on and create the certificate.
+
+        :param bool https_upgrade: (Default False)
+          Indicates that the domain was upgraded from HTTP to HTTPS
+          and acts as a reminder to delete any obsolete HTTP policies
+          to be deleted If and only If both ``enqueue`` and ``https_upgrade``
+          set to ``True``. Ignored if ``False``.
+
+        :return: A dictionary with certificate domain and extra info
+          about the status of the certificate creation
+        :rtype: dict
+
+        :raises RuntimeError: If the CPS request failed
+        """
         try:
             found, found_cert = (
                 self._check_domain_already_exists_on_sni_certs(
@@ -556,6 +729,38 @@ class CertificateController(base.CertificateBase):
                 })
 
     def delete_certificate(self, cert_obj):
+        """Delete SNI certificate.
+
+        Call Akamai's CPS API to delete the certificate.
+
+        Refer to :meth:`create_sni_certificate()` for more details on
+        how the request and response are handled.
+
+        Example Return:
+
+        .. code-block:: python
+
+            {
+                self.provider: {
+                    'cert_domain': 'secured1.sni1.altcdn.com',
+                    'extra_info': {
+                                    'status': 'deleted',
+                                    'deleted_at': str(datetime.datetime.now()),
+                                    'reason': 'Delete request for secured1.sni1.altcdn.com succeeded.'
+                                }
+                }
+            }
+
+
+        :param cert_obj: Certificate details
+        :type cert_obj: poppy.model.ssl_certificate.SSLCertificate
+
+        :return: A dictionary with certificate domain and extra info
+          about the status of the certificate deletion
+        :rtype: dict
+
+        :raises RuntimeError: If the CPS request failed
+        """
         if cert_obj.cert_type == 'sni':
             try:
                 found, found_cert = (
