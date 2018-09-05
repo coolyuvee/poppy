@@ -32,21 +32,51 @@ LOG = log.getLogger(__name__)
 
 
 class ServiceController(base.ServiceBase):
+    """Manages Services and Subcustomer regions.
+
+    Create, Get, Update, Delete and Purge services.
+    Create, Add and Delete subcustomer id regions.
+
+    This class uses Akamai's Policy APIs and CCU API to manage services
+    and subcustomer APIs to manager the subcustomer regions.
+
+    Also, Gets analytics metrics for a given domain name.
+    """
 
     @property
     def http_policy_queue(self):
+        """Get HTTP policy queue.
+
+        :return: HTTP policy queue
+        :rtype: poppy.provider.akamai.http_policy_queue.http_policy_queue.ZookeeperHttpPolicyQueue
+        """
         return self.driver.http_policy_queue
 
     @property
     def policy_api_client(self):
+        """Get Akamai policy API client.
+
+        :return: Policy API client
+        :rtype: requests.Session
+        """
         return self.driver.policy_api_client
 
     @property
     def ccu_api_client(self):
+        """Get Akamai CCU API client.
+
+        :return: CCU API client
+        :rtype: requests.Session
+        """
         return self.driver.ccu_api_client
 
     @property
     def subcustomer_api_client(self):
+        """get Akamai subcustomer API client.
+
+        :return: Subcustomer API client
+        :rtype: requests.Session
+        """
         return self.driver.akamai_sub_customer_api_client
 
     def __init__(self, driver):
@@ -62,6 +92,12 @@ class ServiceController(base.ServiceBase):
         self.san_cert_hostname_limit = self.driver.san_cert_hostname_limit
 
     def reorder_rules(self, post_data):
+        """Change the order of origin rules.
+
+        :param dict post_data: Dictionary of origin rules
+        :return: List of sorted origin rules
+        :rtype: list
+        """
         wildcard_dict = {}
         non_wildcard_dict = {}
         ordered_list = []
@@ -88,6 +124,39 @@ class ServiceController(base.ServiceBase):
         return ordered_list
 
     def create(self, service_obj):
+        """Create a service.
+
+        Create list of rules with ``behaviors`` and ``matches``
+        for each origin present in the supplied ``service_obj``.
+
+        Add the caching and restriction info to the ``behaviors``
+        present in list of rules.
+
+        For each domain, get its configuration number and
+        sub-customer id; Make call to Akamai Policy API to
+        create a new service.
+
+        Example return:
+
+        .. code-block:: python
+
+            {
+                'akamai: {
+                    'id': [{'policy_name': 'abc.example.com',
+                            'protocol': 'https',
+                            'certificate': 'cert'}],
+                    'links': [],
+                    'domains_certificate_status':'pending'
+                }
+            }
+        :param service_obj: The service details
+        :type service_obj: poppy.model.service.Service
+
+        :return: A dictionary of created service details with links
+        :rtype: dict
+
+        :raises RuntimeError: If the Policy API request failed
+        """
         try:
             post_data = {
                 'rules': []
@@ -217,10 +286,41 @@ class ServiceController(base.ServiceBase):
 
     def update(self, provider_service_id,
                service_obj):
+        """Update a service.
+
+        Get list of existing policies. Create new policies for the
+        new domains in the ``service_obj`` and mark old policies for
+        deletion by enqueuing to http_policy_queue.
+
+        :param provider_service_id: The provider details
+        :type provider_service_id: poppy.model.helpers.provider_details.ProviderDetail
+
+        :param service_obj: New service details to update with.
+        :type service_obj: poppy.model.service.Service
+
+        :return:  Dictionary with status of the update
+        :rtype: dict
+        """
         return self._policy(provider_service_id, service_obj)
 
     def _policy(self, provider_service_id, service_obj,
                 invalidate=False, invalidate_url=None):
+        """Update a service.
+
+        For more details, see :meth:`update()`
+
+        :param provider_service_id: The provider details
+        :type provider_service_id: poppy.model.helpers.provider_details.ProviderDetail
+
+        :param service_obj: The service details
+        :type service_obj: poppy.model.service.Service
+
+        :param bool invalidate:
+        :param unicode invalidate_url:
+
+        :return: Dictionary with status of the update
+        :rtype: dict
+        """
         try:
             # depending on domains field presented or not, do PUT/POST
             # and depending on origins field presented or not, set behavior on
@@ -519,7 +619,19 @@ class ServiceController(base.ServiceBase):
                 "failed to update service - %s" % str(e))
 
     def delete(self, project_id, provider_service_id):
-        # delete needs to provide a list of policy id/domains
+        """Delete a service.
+
+        Delete needs to provide a list of policy id/domains and
+        configuration number.
+
+        :param unicode project_id: The project id
+        :param provider_service_id: The provider details
+        :type provider_service_id: poppy.model.helpers.provider_details.ProviderDetail
+
+        :return: Dictionary with delete results
+        :rtype: dict
+        """
+        #
         # then delete them accordingly
         try:
             policies = json.loads(provider_service_id)
@@ -560,6 +672,29 @@ class ServiceController(base.ServiceBase):
 
     def purge(self, provider_service_id, service_obj, hard=True,
               purge_url='/*'):
+        """Purge the contents of a service.
+
+        Example purge_urls (from least specific to most specific):
+
+        - Whole-site wildcard, such as ``/*``
+        - URL path, such as ``/images/*``
+        - Detailed URL path, such as ``/images/logos/partnerA/*``
+        - File extension, such as ``/*.png``
+
+        Akamai's purge-all functionality has not been implemented.
+
+        If ``hard`` is False, The service will be updated with
+        ``service_obj``. Refer to :meth:`update()` for more details.
+
+        :param unicode provider_service_id: Id of the provider
+        :param service_obj: The service object
+        :type service_obj: poppy.model.service.Service
+        :param bool hard: (Default True)
+        :param unicode purge_url: (Default '/*') The purge url
+
+        :return: Dictionary with status of Purge
+        :rtype: dict
+        """
         if not hard:
             if not purge_url.startswith('/'):
                 purge_url = ('/' + purge_url)
@@ -624,11 +759,35 @@ class ServiceController(base.ServiceBase):
                 return self.responder.failed(str(e))
 
     def get_subcustomer_id(self, project_id, domain):
+        """Get subcustomer id.
+
+        Currently the supplied ``project_id`` will be
+        returned as the subcustomer id.
+
+        :param unicode project_id: The project id
+        :param unicode domain: The domain name
+
+        :return: The subcustomer id
+        :rtype: str
+        """
         # subcustomer_id now just set for project_id
         return ''.join([str(project_id)])
 
     def _get_subcustomer_id_region(self, configuration_number,
                                    project_id, domain):
+        """Get region of Sub-customer.
+
+        Makes call to Akamai's Sub-customer API and retrieves
+        the geo location for that sub-customer ID.
+        :param unicode configuration_number: Configuration number
+        :param unicode project_id: The Project id
+        :param unicode domain: The domain name
+
+        :return: Tuple of region and sub-customer id
+        :rtype: tuple[unicode, unicode]
+
+        :raises RuntimeError: If the Sub-customer API failed
+        """
         LOG.info("Starting to get "
                  "Sub-Customer ID "
                  "region for domain: {0}".format(domain))
@@ -655,6 +814,18 @@ class ServiceController(base.ServiceBase):
 
     def _put_subcustomer_id_region(self, configuration_number,
                                    project_id, domain, region='US'):
+        """Create Region for sub-customer.
+
+        Makes call to Akamai's Sub-customer API to add region
+        for this sub-customer id.
+
+        :param unicode configuration_number: The configuration number
+        :param unicode project_id: The project id
+        :param unicode domain: The domain name
+        :param unicode region: The geo region
+
+        :raises RuntimeError: If the Sub-customer API failed
+        """
 
         LOG.info("Starting to put Sub-Customer ID "
                  "region for domain: {0}".format(domain))
@@ -678,6 +849,17 @@ class ServiceController(base.ServiceBase):
 
     def _delete_subcustomer_id_region(self, configuration_number,
                                       project_id, domain):
+        """Delete region belonging to this subcustomer id.
+
+        Makes call to Akamai's Sub-customer API to delete region
+        for this sub-customer id.
+
+        :param unicode configuration_number: The configuration number
+        :param unicode project_id: The project id
+        :param unicode domain: The domain name
+
+        :raises RuntimeError: If the Sub-customer API failed
+        """
 
         LOG.info("Starting to delete "
                  "Sub-Customer ID for "
@@ -702,12 +884,54 @@ class ServiceController(base.ServiceBase):
         return None
 
     def _classify_domains(self, domains_list):
-        # classify domains into different categories based on first two level
-        # of domains, group them together
-        # for right now we just use the whole domain as the digital property
+        """Classify domains.
+
+        Classify domains into different categories based
+        on first two level of domains, group them together.
+        For right now we just use the whole domain as the
+        digital property
+
+        :param list domains_list: List of domains
+        :return: list of domains
+        :rtype: list
+        """
+
         return domains_list
 
     def _process_new_origin(self, origin, rules_list):
+        """Build Rules for this origin.
+
+        Create ``matches`` and ``behaviors`` from the origin's
+        rules and add them to supplied to ``rules_list``.
+        After processing the rules present in origin ``rules_list``
+        will be updated to have values some thing like below.
+
+        .. code-block:: python
+
+            {
+                'matches': {
+                    'name': 'url-wildcard',
+                    'value': "/css /js /png"
+                 },
+                'behaviors': [{
+                    'name': 'origin',
+                    'value': '-',
+                    'params': {
+                        'originDomain': '',
+                        'hostHeaderType': 'digital_property',
+                        'cacheKeyType': 'digital_property',
+                        'hostHeaderValue': '-',
+                        'cacheKeyValue': '-'
+                    }
+                 }]
+            }
+
+        :param origin: The origin object
+        :type origin: poppy.model.helpers.origin.Origin
+
+        :param rules_list: List of rules
+        :type rules_list: list
+        """
 
         # NOTE(TheSriram): ensure that request_url starts with a '/'
         for rule in origin.rules:
@@ -770,6 +994,18 @@ class ServiceController(base.ServiceBase):
         rules_list.append(rule_dict_template)
 
     def _process_new_domain(self, domain, rules_list):
+        """Add domain name to rule's behaviors.
+
+        Set the ``digitalProperty`` of each ``behavior``
+        in the origin rules list to the domain name.
+
+        :param domain: The domain object
+        :type domain: poppy.model.helpers.domain.Domain
+        :param list rules_list: List of origin rules
+
+        :return: The domain name
+        :rtype: unicode
+        """
         dp = domain.domain
 
         for rule in rules_list:
@@ -779,6 +1015,14 @@ class ServiceController(base.ServiceBase):
         return dp
 
     def _process_restriction_rules(self, restriction_rules, rules_list):
+        """Setup the restriction rules.
+
+        Build the blacklisted and whitelisted restriction rules
+        based on the entities : ``referrer``, ``geography``, ``client_ip``
+
+        :param list restriction_rules: List of Restriction rules
+        :param list rules_list: List of Origin rules
+        """
 
         # NOTE(TheSriram): ensure that request_url starts with a '/'
         for restriction_rule in restriction_rules:
@@ -899,6 +1143,11 @@ class ServiceController(base.ServiceBase):
 
     def _process_cache_invalidation_rules(self, invalidation_url,
                                           rules_list):
+        """Add the cache invalidation behavior to matching ules.
+
+        :param unicode invalidation_url:
+        :param list rules_list: List of origin rules
+        """
         found_match = False
         # if we have a matches rule already
         for rule in rules_list:
@@ -933,6 +1182,13 @@ class ServiceController(base.ServiceBase):
             rules_list.append(rule_dict_template)
 
     def _get_behavior_name(self, entity, entity_restriction_access):
+        """Get behavior name to build restriction rules.
+
+        :param unicode entity: Entity name
+        :param unicode entity_restriction_access: Entity access name
+        :return: The behavior name
+        :rtype: unicode
+        """
         prefix = suffix = None
         if entity == 'referrer':
             prefix = 'referer'
@@ -949,6 +1205,16 @@ class ServiceController(base.ServiceBase):
         return '-'.join([prefix, suffix])
 
     def _get_behavior_value(self, entity, rule_entries):
+        """Get behavior values for given entity.
+
+        :param unicode entity: The entity name
+        :param list rule_entries: The rule entries
+        :return: The behavior value
+        :rtype: unicode
+
+        :raises ValueError: if the ``geography`` entity
+          has duplicate country code
+        """
         if entity == 'referrer':
             return ' '.join(
                 ['*%s*' % referrer
@@ -989,6 +1255,14 @@ class ServiceController(base.ServiceBase):
             return res
 
     def _process_caching_rules(self, caching_rules, rules_list):
+        """Setup the caching rules.
+
+        For each caching rule, set ``type`` and ``value``
+        to ``behaviors`` under the rule.
+
+        :param list caching_rules: List of caching rules
+        :param list rules_list: List of origin rules
+        """
         # akamai requires all caching rules to start with '/'
         # so, if a caching rules does not start with '/'
         # prefix the caching rule with '/'
@@ -1064,6 +1338,19 @@ class ServiceController(base.ServiceBase):
         # end loop - caching_rules
 
     def _get_configuration_number(self, domain_obj):
+        """Get the configuration number for the given domain.
+
+        Based on the protocol of the domain and certificate type,
+        configuration number will be taken from ``poppy.conf``.
+
+        :param domain_obj: The domain object
+        :type domain_obj: poppy.model.helpers.domain.Domain
+
+        :return: The configuration numer
+        :rtype: unicode
+
+        :raises ValueError: if the domain has unknown certificate
+        """
         # TODO(tonytan4ever): also classify domains based on their
         # protocols. http and https domains needs to be created
         # with separate base urls.
@@ -1085,6 +1372,23 @@ class ServiceController(base.ServiceBase):
         return configuration_number
 
     def _get_provider_access_url(self, domain_obj, dp, edge_host_name=None):
+        """Get Access url of the provider.
+
+        The Access url will be based on the domain's
+        protocol and certificate type.
+
+        :param domain_obj: The domain object
+        :type domain_obj: poppy.model.helpers.domain.Domain
+
+        :param unicode dp: The domain name
+        :param unicode edge_host_name: The edge hostname
+
+        :return: The access url
+        :rtype: unicode
+
+        :raises ValueError: If unknown certificate or
+          EdgeHost name not provided for the SAN cert
+        """
         provider_access_url = None
         if domain_obj.protocol == 'http':
             provider_access_url = self.driver.akamai_access_url_link
@@ -1119,6 +1423,19 @@ class ServiceController(base.ServiceBase):
         return provider_access_url
 
     def get_provider_service_id(self, service_obj):
+        """ Get domain values for this service object.
+
+        For each domain in the ``service_obj``, retrieve
+        domain name, protocol and certificate details.
+
+        Add them and return a serialized str value.
+
+        :param service_obj: The service object
+        :type service_obj: poppy.model.service.Service
+
+        :return: Serialized JSON str with domain info
+        :rtype: unicode
+        """
         id_list = []
         for domain in service_obj.domains:
             dp_obj = {'policy_name': domain.domain,
@@ -1129,8 +1446,22 @@ class ServiceController(base.ServiceBase):
 
     def get_metrics_by_domain(self, project_id, domain_name, regions,
                               **extras):
-        """Use Akamai's report API to get the metrics by domain."""
+        """Get metrics for a given domain name.
 
+        The input ``extras`` (kwargs) expects the below keys:
+            - metricType
+            - startTime
+            - endTime
+            - metrics_controller
+
+        :param unicode project_id: The project id
+        :param unicode domain_name: The domain name
+        :param list regions: List of regions
+        :param dict extras: Additional parameters
+
+        :return: A dictionary containing the metrics
+        :rtype: dict
+        """
         formatted_results = dict()
         metric_buckets = []
         metricType = extras['metricType']
