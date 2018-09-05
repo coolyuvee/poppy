@@ -39,6 +39,10 @@ class CertificateController(base.CertificateBase):
     CPS and SPS APIs are async in nature; when you call
     the api, the service responds with an ID, which can
     be used to track the status of the request.
+
+    Both the CPS and SPS uses ``enrollmentId`` to identify
+    the certificates. The enrollmentId returned by SPS can be
+    used as input for the CPS and vice versa.
     """
     @property
     def mod_san_queue(self):
@@ -116,10 +120,10 @@ class CertificateController(base.CertificateBase):
 
             - Domain name does not already exists on the SAN/SNI certificates
             - There is an available SAN certificate from the configured list
-                * The certificate is not disabled
-                * Number of Hosts is within the configured hostname limit
-                * Last SPS request status for that available SAN certificate is
-                    ``SPS Request Complete``
+                - The certificate is not disabled
+                - Number of Hosts is within the configured hostname limit
+                - Last SPS request status for that available SAN certificate is \
+                    SPS Request Complete
 
         For SNI certificates, refer to :meth:`create_sni_certificate()`.
 
@@ -470,7 +474,6 @@ class CertificateController(base.CertificateBase):
 
         For SAN certificates, refer to :meth:`create_certificate()`.
 
-        Update an enrollment:
         Depending on the type and impact of change, The response from
         CPS will vary. HTTP 202 may returned for operations that require
         a new cert creation and network deployment. In such cases, store
