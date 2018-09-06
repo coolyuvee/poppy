@@ -47,8 +47,27 @@ AKAMAI_GROUP = 'drivers:provider:akamai:queue'
 
 
 class ZookeeperHttpPolicyQueue(base.HttpPolicyQueue):
+    """Queue to store old HTTP policies.
+
+    Store the obsolete HTTP policies to mark them
+    for deletion; below are the scenarios in which
+    we mark the policies for the deletion:
+        -  Whenever a domain is migrated from http to
+           https
+        - Updating services
+
+    The queue is implemented using ``zookeeper`` and
+    is a ``locking queue``.
+
+    The path for the queue is read from ``poppy.conf``
+    """
 
     def __init__(self, conf):
+        """Initialize Zookeeper locking queue.
+
+        :param conf: Poppy configuration
+        :type conf: oslo_config.ConfigOpts
+        """
         super(ZookeeperHttpPolicyQueue, self).__init__(conf)
 
         self._conf.register_opts(AKAMAI_OPTIONS,
@@ -57,18 +76,55 @@ class ZookeeperHttpPolicyQueue(base.HttpPolicyQueue):
 
     @decorators.lazy_property(write=False)
     def http_policy_queue_backend(self):
+        """Return Zookeeper locking queue.
+
+        :return: Locking queue object
+        :rtype: kazoo.recipe.queue.LockingQueue
+        """
+
         return queue.LockingQueue(
             self.zk_client,
             self.akamai_conf.http_policy_queue_path)
 
     @decorators.lazy_property(write=False)
     def zk_client(self):
+        """Create and Return zookeeper client.
+
+        :return: Zookeeper client
+        :rtype: kazoo.client.KazooClient
+        """
         return utils.connect_to_zookeeper_queue_backend(self.akamai_conf)
 
     def enqueue_http_policy(self, http_policy):
+        """Put http policy details into queue.
+
+        Example input ``http_policy``. (Serialize
+        the dict and use it as parameter to store
+        the policy into queue.)
+
+        .. code-block:: python
+
+            '{
+                "configuration_number": 1,
+                "policy_name": "www.abc.com",
+                "project_id": "12345"
+            }'
+
+        :param str http_policy: Serialized dictionary
+            with policy details
+        """
         self.http_policy_queue_backend.put(http_policy)
 
     def traverse_queue(self, consume=False):
+        """Get list of all items in the queue.
+
+        :param bool consume: (Default False) If set to
+        ``True``, the queue will be emptied. Otherwise,
+        queue will be intact.
+
+        :return: List of policies in the queue
+        :rtype: list[str]
+        """
         res = []
         while len(self.http_policy_queue_backend) > 0:
             item = self.http_policy_queue_backend.get()
@@ -79,9 +135,18 @@ class ZookeeperHttpPolicyQueue(base.HttpPolicyQueue):
         return res
 
     def put_queue_data(self, queue_data):
-        # put queue data will replace all existing
-        # queue data with the incoming new queue_data
-        # dequeue all the existing data
+        """Replace the Queue with new incoming data.
+
+        All the existing data in the queue will be
+        deleted and replaced with the supplied
+        ``queue_data``.
+
+        :param list queue_data: The new data to replace
+            the queue with.
+
+        :return: New items present in the queue.
+        :rtype: list
+        """
         while len(self.http_policy_queue_backend) > 0:
             self.http_policy_queue_backend.get()
             self.http_policy_queue_backend.consume()
@@ -90,6 +155,27 @@ class ZookeeperHttpPolicyQueue(base.HttpPolicyQueue):
         return queue_data
 
     def dequeue_http_policy(self, consume=True):
+        """Returns entry from the queue.
+
+        Example return:
+
+        .. code-block:: python
+
+            '{
+                "configuration_number": 1,
+                "policy_name": "www.abc.com",
+                "project_id": "12345"
+            }'
+
+        :param bool consume: (Default True) If set to
+            ``True``, the entry from the queue will be
+            deleted. Else, entry will be returned only.
+
+        :return: Serialized dictionary
+            with policy details
+        :rtype: str
+        """
+
         res = self.http_policy_queue_backend.get()
         if consume:
             self.http_policy_queue_backend.consume()

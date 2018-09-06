@@ -39,8 +39,31 @@ AKAMAI_GROUP = 'drivers:provider:akamai:queue'
 
 
 class ZookeeperModSanQueue(base.ModSanQueue):
+    """Buffer Mod San requests.
+
+    We have configured list of SAN certificate names
+    in ``poppy.conf``. Whenever a request to add a
+    domain comes, One of SAN certificate will be choosen
+    from the list to add the domain; making that SAN
+    cert status ``pending`` for some time. In such
+    scenario where there is no ``Available`` certificate
+    present from the list and if a new request comes to add
+    another domain, then that request will be stored in
+    this ``mod san queue`` for future processing.
+
+    The queue is implemented using ``zookeeper`` and
+    is a ``locking queue``.
+
+    The path for the queue is read from the section
+    ``drivers:provider:akamai:queue]`` in ``poppy.conf``
+    """
 
     def __init__(self, conf):
+        """Initialize Zookeeper locking queue.
+
+         :param conf: Poppy configuration
+         :type conf: oslo_config.ConfigOpts
+        """
         super(ZookeeperModSanQueue, self).__init__(conf)
 
         self._conf.register_opts(AKAMAI_OPTIONS,
@@ -49,18 +72,54 @@ class ZookeeperModSanQueue(base.ModSanQueue):
 
     @decorators.lazy_property(write=False)
     def mod_san_queue_backend(self):
+        """Return Zookeeper locking queue.
+
+        :return: Locking queue object
+        :rtype: kazoo.recipe.queue.LockingQueue
+        """
         return queue.LockingQueue(
             self.zk_client,
             self.akamai_conf.mod_san_queue_path)
 
     @decorators.lazy_property(write=False)
     def zk_client(self):
+        """Create and Return zookeeper client.
+
+        :return: Zookeeper client
+        :rtype: kazoo.client.KazooClient
+        """
         return utils.connect_to_zookeeper_queue_backend(self.akamai_conf)
 
     def enqueue_mod_san_request(self, cert_obj_json):
+        """Put certificate details into queue.
+
+        Example input ``cert_obj_json``. (Serialize
+        the dict and use it as an input to store the
+        certificate details into the queue.)
+
+        .. code-block:: python
+
+            '{
+                "cert_type": "san",
+                "domain_name": "www.abc.com",
+                "flavor_id": "premium"
+            }'
+
+        :param str cert_obj_json: Serialized dictionary
+            with certificate details
+        """
         self.mod_san_queue_backend.put(cert_obj_json)
 
     def traverse_queue(self):
+        """Get list of all items in the queue.
+
+        Even though the queue is emptied while traversing,
+        all the items will be put back into queue. So, the
+        queue will be intact after the traversal.
+
+        :return: List of certificates in the queue
+        :rtype: list[str]
+        """
         res = []
         while len(self.mod_san_queue_backend) > 0:
             item = self.mod_san_queue_backend.get()
@@ -70,9 +129,18 @@ class ZookeeperModSanQueue(base.ModSanQueue):
         return res
 
     def put_queue_data(self, queue_data):
-        # put queue data will replace all existing
-        # queue data with the incoming new queue_data
-        # dequeue all the existing data
+        """Replace the Queue with new incoming data.
+
+        All the existing data in the queue will be
+        deleted and replaced with the supplied
+        ``queue_data``.
+
+        :param list queue_data: The new data to replace
+            the queue with.
+
+        :return: New items present in the queue.
+        :rtype: list
+        """
         while len(self.mod_san_queue_backend) > 0:
             self.mod_san_queue_backend.get()
             self.mod_san_queue_backend.consume()
@@ -81,6 +149,26 @@ class ZookeeperModSanQueue(base.ModSanQueue):
         return queue_data
 
     def dequeue_mod_san_request(self, consume=True):
+        """Returns entry from the queue.
+
+        Example return.
+
+        .. code-block:: python
+
+            '{
+                "cert_type": "san",
+                "domain_name": "www.abc.com",
+                "flavor_id": "premium"
+            }'
+
+        :param bool consume: (Default True) If set to
+            ``True``, the entry from the queue will be
+            deleted. Else, entry will be returned only.
+
+        :return: Serialized dictionary
+            with certificate details
+        :rtype: str
+        """
         res = self.mod_san_queue_backend.get()
         if consume:
             self.mod_san_queue_backend.consume()
