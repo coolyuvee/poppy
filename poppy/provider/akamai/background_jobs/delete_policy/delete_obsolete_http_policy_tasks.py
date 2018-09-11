@@ -37,8 +37,10 @@ class DeleteObsoleteHTTPPolicy(task.Task):
     def execute(self, configuration_number, policy_name):
         """Deletes old HTTP policy once a domain is upgraded to HTTPS+san.
 
-        :param configuration_number: akamai configuration number
-        :param policy_name: name of policy on akamai policy api
+        :param unicode configuration_number: akamai configuration number
+        :param unicode policy_name: name of policy on akamai policy api
+
+        :raises RuntimeError: If Akamai Policy API failed
         """
 
         resp = self.akamai_driver.policy_api_client.delete(

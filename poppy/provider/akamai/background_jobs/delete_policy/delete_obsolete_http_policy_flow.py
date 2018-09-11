@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Taskflow's Flow to delete old http policies.
+
+Create and return a flow that consists of
+Taskflow's Task to delete the old http policies.
+"""
 from oslo_config import cfg
 from oslo_log import log
 from taskflow.patterns import linear_flow
@@ -28,6 +33,11 @@ conf(project='poppy', prog='poppy', args=[])
 
 
 def delete_obsolete_http_policy():
+    """Create flow to delete old http policy.
+
+    :return: Linear Flow with ``delete old http policy`` task
+    :rtype: taskflow.patterns.linear_flow.Flow
+    """
     flow = linear_flow.Flow('Deleting obsolete HTTP policy').add(
         delete_obsolete_http_policy_tasks.DeleteObsoleteHTTPPolicy(),
     )

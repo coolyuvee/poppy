@@ -13,6 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Checks and updates the status of certificates.
+
+The module has below tasks defined in it and will be
+called when the parent flow is loaded into Taskflow
+engine:
+    - Get the certificate for a given details
+    - Determine the needed status for the certificate
+    - Update the certificate with that status
+"""
+
 import json
 
 from oslo_config import cfg
@@ -29,9 +39,34 @@ conf(project='poppy', prog='poppy', args=[])
 
 
 class GetCertInfoTask(task.Task):
+    """Get the certificate object.
+
+    Fetch the certificate details from cassandra storage
+    for the below given values:
+         - domain name
+         - certificate type
+         - flavor id
+         - project id
+
+    Serialize the certificate details and return.
+
+    The returned value will be assigned to the variable
+    ``cert_obj_json`` and consumed by the next Task
+    in the flow :class:`CheckCertStatusTask` to check the status.
+    """
     default_provides = "cert_obj_json"
 
     def execute(self, domain_name, cert_type, flavor_id, project_id):
+        """Return certificate details.
+
+        :param unicode domain_name: The domain name
+        :param unicode cert_type: Type of the certificate
+        :param unicode flavor_id: Flavor id
+        :param unicode project_id: Project id
+
+        :return: Serialized dict of certificate details
+        :rtype: str
+        """
         service_controller, self.ssl_certificate_manager = \
             memoized_controllers.task_controllers('poppy', 'ssl_certificate')
         self.storage = self.ssl_certificate_manager.storage
@@ -45,6 +80,7 @@ class GetCertInfoTask(task.Task):
 
 
 class CheckCertStatusTask(task.Task):
+    """Determine the correct status for the certificate."""
     default_provides = "status_change_to"
 
     def __init__(self):
@@ -54,6 +90,42 @@ class CheckCertStatusTask(task.Task):
         self.akamai_driver = self.providers['akamai'].obj
 
     def execute(self, cert_obj_json):
+        """Get the status for the certificate based on its type.
+
+        The ``cert_obj_json`` will be an output from the
+        previous task in the flow :class:`GetCertInfoTask`.
+
+        For SAN types, Makes call to Akamai SPS API and inspects the status
+        returned from Akamai.
+
+        Below are expected status from Akamai for SAN:
+            - 'SPS Request Complete'
+            - 'edge host already created or pending'
+            - 'CPS cancelled'
+
+        Return a new status for the certificate based on the
+        SPS response status. If the status is other than the
+        above mentioned list, then send the certificate to
+        ``san mapping queue``.
+
+        For SNI types, Makes call to CPS API and gets list of
+        pending changes. If the ``change url`` is still present
+        under pending changes, put the certificate details into
+        ``san mapping queue`` for future check. Else, return a
+        status the certificate should have.
+
+        In either of the cert types, the returned value will be
+        assigned to a variable ``status_change_to`` which will
+        be consumed by the next task :class:`UpdateCertStatusTask`
+        in the flow pipeline.
+
+        :param str cert_obj_json: Serialized certificate details
+
+        :return: Status needs to be set for the certificate
+        :rtype: str
+
+        :raises RuntimeError: If Akamai SPS request failed
+        """
         if cert_obj_json != "":
             cert_obj = ssl_certificate.load_from_json(
                 json.loads(cert_obj_json))
@@ -167,6 +239,7 @@ class CheckCertStatusTask(task.Task):
 
 
 class UpdateCertStatusTask(task.Task):
+    """Update the certificate status"""
 
     def __init__(self):
         super(UpdateCertStatusTask, self).__init__()
@@ -178,6 +251,15 @@ class UpdateCertStatusTask(task.Task):
         self.service_storage = service_controller.storage_controller
 
     def execute(self, project_id, cert_obj_json, status_change_to):
+        """Update certificate and provider details.
+
+        The ``status_change_to`` will be an output from the
+        previous task in the flow :class:`CheckCertStatusTask`.
+
+        :param unicode project_id: The project id
+        :param str cert_obj_json: Certificate details
+        :param str status_change_to: New status for the certificate
+        """
         if not cert_obj_json:
             return
         cert_obj = ssl_certificate.load_from_json(

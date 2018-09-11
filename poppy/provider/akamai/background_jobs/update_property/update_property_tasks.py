@@ -29,6 +29,15 @@ conf(project='poppy', prog='poppy', args=[])
 
 
 class PropertyGetLatestVersionTask(task.Task):
+    """Get or create latest property version.
+
+    This is the very first Task that gets run from
+    the ``update_property_flow``.
+
+    The return value from :meth:`execute()` will be
+    passed as parameter ``new_version_number`` to the
+    next task in the flow :class:`PropertyUpdateTask`.
+    """
     default_provides = "new_version_number"
 
     def __init__(self):
@@ -40,7 +49,19 @@ class PropertyGetLatestVersionTask(task.Task):
         self.akamai_conf = self.akamai_driver.akamai_conf
 
     def execute(self, property_spec):
-        """Get/Create a new Akamai property update version if necessary"""
+        """Get/Create a new Akamai property update version if necessary
+
+        Makes calls to Akamai's PAPI to get the the property details
+        and to create a new property version.
+
+        :param unicode property_spec: The property name
+        :return: The latest version of the property
+        :rtype: int
+
+        :raises RuntimeError: If Akamai PAPI request failed
+        :raises ValueError: If ``production status`` of the
+          latest version is in ``PENDING``.
+        """
         self.property_id = self.akamai_driver.papi_property_id(property_spec)
 
         LOG.info('Starting to get next version for property: %s'
@@ -117,6 +138,15 @@ class PropertyGetLatestVersionTask(task.Task):
 
 
 class PropertyUpdateTask(task.Task):
+    """Update property hostnames.
+
+    This task runs after the :class:`PropertyGetLatestVersionTask` as
+    part of the parent Taskflow Flow ``update_property_flow``.
+
+    The return value from the :meth:`execute()`` will be
+    passed as an input to the :class:`PropertyActivateTask``
+    with the name ``update_detail``.
+    """
     default_provides = 'update_detail'
 
     def __init__(self):
@@ -132,7 +162,25 @@ class PropertyUpdateTask(task.Task):
 
     def execute(self, property_spec, new_version_number, update_type,
                 update_info_list):
-        """Update an Akamai property"""
+        """Update an Akamai property.
+
+        Makes call to Akamai's PAPI to get the list of
+         ``hostnames`` and ``edge host name``.
+
+        Based on add or delete actions, prepares hosts list
+         accordingly to update the property.
+
+        :param unicode property_spec: The property name
+        :param int new_version_number: The latest property version
+        :param str update_type: Type of the update
+        :param list update_info_list: List of tuples with action and
+             cname host mapping info
+
+        :return: serialized List of added and removed cnameFrom and cnameTo records
+        :rtype: str
+
+        :raises RuntimeError: If PAPI request failed
+        """
         self.property_id = self.akamai_driver.papi_property_id(property_spec)
 
         update_info_list = json.loads(update_info_list)
@@ -242,7 +290,11 @@ class PropertyUpdateTask(task.Task):
 
 
 class PropertyActivateTask(task.Task):
+    """Activate the updated property into production.
 
+    This task runs after the :class:`PropertyUpdateTask`
+    as part of the ``update_property_flow()``.
+    """
     def __init__(self):
         super(PropertyActivateTask, self).__init__()
         service_controller, self.providers = \
@@ -253,7 +305,26 @@ class PropertyActivateTask(task.Task):
 
     def execute(self, property_spec, new_version_number, update_detail,
                 notify_email_list=[]):
-        """Update an Akamai property"""
+        """Activate the updated property.
+
+        Makes call to PAPI with the updated property details.
+        A first time Activation API call returns with 400 status
+        code with warning messages before activating. Make an
+        acknowledgement for these warning messages by making
+        a followup PAPI request to proceed to activation.
+
+        :param unicode property_spec: The property id
+        :param int new_version_number: The latest property version
+        :param str update_detail: serialized List of added and
+            removed cnameFrom and cnameTo records
+        :param list notify_email_list: (Default []) List of emails
+            to notify about the activation
+
+        :return: The activation link
+        :rtype: dict
+
+        :raises RuntimeError: If PAPI request failed
+        """
         self.property_id = self.akamai_driver.papi_property_id(property_spec)
 
         # This request needs json
@@ -312,6 +383,10 @@ class PropertyActivateTask(task.Task):
 
 
 class MarkQueueItemsWithActivatedProperty(task.Task):
+    """Update the san mapping queue with activated property.
+
+    This task will be the final one in ``update_property_flow()``.
+    """
 
     def __init__(self):
         super(MarkQueueItemsWithActivatedProperty, self).__init__()
@@ -320,6 +395,16 @@ class MarkQueueItemsWithActivatedProperty(task.Task):
         self.akamai_driver = self.providers['akamai'].obj
 
     def execute(self, update_info_list):
+        """Mark certs in san mapping queue with property activated.
+
+        Traverse the ``san mapping queue``; update and keep
+        those certificates whose properties are activated by
+        marking the field ``property_activated`` of each such
+        certificate.
+
+        :param update_info_list: List of tuples with action and
+             cname host mapping info
+        """
         update_info_list = json.loads(update_info_list)
 
         queue_data = self.akamai_driver.san_mapping_queue.traverse_queue()
