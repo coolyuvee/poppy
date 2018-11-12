@@ -72,24 +72,12 @@ class TestAkamaiBJFlowRuns(base.TestCase):
         self.addCleanup(bootstrap_patcher.stop)
 
     def test_check_cert_status_and_update_flow(self):
-        cert_obj_json = json.dumps(
-            ssl_certificate.SSLCertificate(
-                'cdn',
-                'website.com',
-                'san',
-                cert_details={
-                    'Akamai': {
-                        'extra_info': {
-                            'san cert': 'secure1.san1.testcdn.com'
-                        }
-                    }
-                }
-            ).to_dict()
-        )
-
         kwargs = {
-            'cert_obj_json': cert_obj_json,
-            'project_id': "000"
+            'domain_name': 'website.com',
+            'cert_type': 'san',
+            'flavor_id': 'cdn',
+            'project_id': "000",
+            "property_spec": "akamai_https_san_config_numbers"
         }
         engines.run(check_cert_status_and_update_flow.
                     check_cert_status_and_update_flow(),
@@ -114,4 +102,16 @@ class TestAkamaiBJFlowRuns(base.TestCase):
                 )])
         }
         engines.run(update_property_flow.update_property_flow(),
+                    store=kwargs)
+
+    def test_domain_exists_in_latest_property_hostnames(self):
+        kwargs = {
+            'domain_name': 'website.com',
+            'cert_type': 'sni',
+            'flavor_id': 'flavor1',
+            'project_id': "000",
+            "property_spec": "akamai_https_san_config_numbers"
+        }
+        engines.run(check_cert_status_and_update_flow.
+                    check_cert_status_and_update_flow(),
                     store=kwargs)

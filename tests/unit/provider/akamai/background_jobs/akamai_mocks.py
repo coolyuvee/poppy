@@ -70,6 +70,7 @@ class MockManager(mock.Mock):
         }
         akamai_mock_provider_obj.akamai_sps_api_client = MockSPSAPIClient()
         akamai_mock_provider_obj.akamai_papi_api_client = MockPapiAPIClient()
+        akamai_mock_provider_obj.akamai_cps_api_client = MockCPSAPIClient()
         akamai_mock_provider_obj.akamai_sps_api_base_url = (
             'https://mybaseurl.net/config-secure-provisioning-service/'
             'v1/sps-requests/{spsId}?'
@@ -77,6 +78,10 @@ class MockManager(mock.Mock):
         akamai_mock_provider_obj.akamai_papi_api_base_url = (
             'https://mybaseurl.net/papi/v1/{middle_part}/'
             '?contractId=ctr_None&groupId=grp_None')
+        akamai_mock_provider_obj.akamai_cps_api_base_url = (
+            'https://mybaseurl.net/'
+            '/cps/v2/enrollments/{enrollmentId}'
+        )
         akamai_mock_provider_obj.san_mapping_queue.\
             traverse_queue.return_value = []
         akamai_mock_provider.obj = akamai_mock_provider_obj
@@ -107,6 +112,26 @@ class MockStorageController(mock.Mock):
     def get_certs_by_domain(self, domain_name, project_id=None,
                             flavor_id=None,
                             cert_type=None):
+
+        if cert_type == 'sni':
+            return ssl_certificate.SSLCertificate(
+                "premium",
+                "blog.testabcd.com",
+                "sni",
+                project_id=project_id,
+                cert_details={
+                    'Akamai': {
+                        u'cert_domain': u'secure2.san1.test_123.com',
+                        u'extra_info': {
+                            u'change_url': '/cps/v2/enrollments/10000/changes/10000',
+                            u'action': u'Waiting for customer domain '
+                                       'validation for blog.testabc.com',
+                            u'create_at': u'2015-09-29 16:09:12.429147',
+                            u'san cert': u'secure2.san1.test_123.com',
+                            u'status': u'create_in_progress'}
+                    }
+                }
+            )
 
         return ssl_certificate.SSLCertificate(
             "premium",
@@ -164,6 +189,11 @@ class MockPapiAPIClient(mock.Mock):
                         "cnameType": "EDGE_HOSTNAME",
                         "edgeHostnameId": "ehn_1126816",
                         "cnameFrom": "secure.san2.test_789.com",
+                        "cnameTo": "secure.test_456.com.edge_host_test.net"
+                    }, {
+                        "cnameType": "EDGE_HOSTNAME",
+                        "edgeHostnameId": "ehn_1231234",
+                        "cnameFrom": "blog.testabcd.com",
                         "cnameTo": "secure.test_456.com.edge_host_test.net"
                     }]
                 }
@@ -340,4 +370,63 @@ class MockSPSAPIClient(mock.Mock):
         return self.response_200
 
     def put(self, url, data=None, headers=None):
+        return self.response_200
+
+class MockCPSAPIClient(mock.Mock):
+    def __init__(self):
+        super(MockCPSAPIClient, self).__init__()
+        self.response_200 = mock.Mock(status_code=200)
+
+    def get(self, url, headers):
+        self.response_200.text = json.dumps({
+            "location": "/cps/v2/enrollments/10002",
+            "ra": "third-party",
+            "validationType": "third-party",
+            "certificateType": "third-party",
+            "certificateChainType": "default",
+            "networkConfiguration": {
+                "geography": "core",
+                "secureNetwork": "enhanced-tls",
+                "mustHaveCiphers": "ak-akamai-default",
+                "preferredCiphers": "ak-akamai-default-interim",
+                "disallowedTlsVersions": [],
+                "sniOnly": True,
+                "quicEnabled": False,
+                "sni": {
+                    "cloneDnsNames": False,
+                    "dnsNames": [
+                        "blog.testabcd.com",
+                        "san1.example.com"
+                    ]
+                },
+                "ocspStapling": "not-set"
+            },
+            "signatureAlgorithm": None,
+            "changeManagement": True,
+            "csr": {
+                "cn": "www.example.com",
+                "c": "US",
+                "st": "MA",
+                "l": "Cambridge",
+                "o": "Akamai",
+                "ou": "WebEx",
+                "sans": [
+                    "san1.example.com",
+                    "san2.example.com",
+                    "san3.example.com"
+                ]
+            },
+
+            "thirdParty": {
+                "excludeSans": False
+            },
+            "enableMultiStackedCertificates": False,
+            "pendingChanges": [
+                "/cps/v2/enrollments/10002/changes/10002"
+            ],
+            "maxAllowedSanNames": 100,
+            "maxAllowedWildcardSanNames": 100
+        })
+
+        self.response_200.status_code = 200
         return self.response_200

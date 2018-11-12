@@ -112,7 +112,10 @@ class BackgroundJobController(base.BackgroundJobController):
                         )
                         t_kwargs = {
                             "cert_obj_json": json.dumps(cert_dict),
-                            "project_id": cert_dict.get("project_id")
+                            "project_id": cert_dict.get("project_id"),
+                            "property_spec": kwargs.get(
+                                "property_spec",
+                                'akamai_https_sni_config_numbers')
                         }
                         if cert_dict.get('property_activated', False) is True:
                             self.distributed_task_controller.submit_task(

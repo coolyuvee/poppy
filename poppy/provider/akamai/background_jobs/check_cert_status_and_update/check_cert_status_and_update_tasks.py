@@ -28,6 +28,54 @@ conf = cfg.CONF
 conf(project='poppy', prog='poppy', args=[])
 
 
+class GetHostnamesFromProperty(task.Task):
+    default_provides = 'hosts_in_latest_property'
+
+    def __init__(self):
+        super(GetHostnamesFromProperty, self).__init__()
+        service_controller, self.providers = \
+            memoized_controllers.task_controllers('poppy', 'providers')
+        self.akamai_driver = self.providers['akamai'].obj
+        self.existing_hosts = []
+
+    def execute(self, property_spec):
+        """Get the host names from the latest property"""
+        self.property_id = self.akamai_driver.papi_property_id(property_spec)
+
+        LOG.info('Starting to get latest version for property: %s'
+                 % self.property_id)
+        resp = self.akamai_driver.akamai_papi_api_client.get(
+            self.akamai_driver.akamai_papi_api_base_url.format(
+                middle_part='properties/%s' % self.property_id)
+        )
+        if resp.status_code != 200:
+            raise RuntimeError('PAPI API request failed.'
+                               'Exception: %s' % resp.text)
+        else:
+            property = json.loads(resp.text)['properties']['items'][0]
+            latestVersion = property['latestVersion'] or 0
+            production_version = property['productionVersion'] or -1
+            staging_version = property['stagingVersion'] or -1
+
+            max_version = max(latestVersion, production_version,
+                              staging_version)
+        resp = self.akamai_driver.akamai_papi_api_client.get(
+            self.akamai_driver.akamai_papi_api_base_url.format(
+                middle_part='properties/%s/versions/%s/hostnames' %
+                (self.property_id,
+                 str(max_version)))
+        )
+        if resp.status_code != 200:
+            raise RuntimeError('PAPI API request failed.'
+                               'Exception: %s' % resp.text)
+        self.existing_hosts = json.loads(resp.text)['hostnames'][
+            'items']
+        self.existing_hosts = [str(host['cnameFrom'])
+                               for host in self.existing_hosts]
+
+        return self.existing_hosts
+
+
 class GetCertInfoTask(task.Task):
     default_provides = "cert_obj_json"
 
@@ -55,7 +103,7 @@ class CheckCertStatusTask(task.Task):
             memoized_controllers.task_controllers('poppy', 'providers')
         self.akamai_driver = self.providers['akamai'].obj
 
-    def execute(self, cert_obj_json):
+    def execute(self, cert_obj_json, hosts_in_latest_property):
         if cert_obj_json != "":
             cert_obj = ssl_certificate.load_from_json(
                 json.loads(cert_obj_json))
@@ -156,7 +204,16 @@ class CheckCertStatusTask(task.Task):
 
                 if change_url not in pending_changes:
                     if cert_obj.domain_name in dns_names:
-                        return "deployed"
+                        if cert_obj.domain_name in hosts_in_latest_property:
+                            return "deployed"
+                        else:
+                            # The hostname is still not on the latest
+                            # property version. Return the item to the
+                            # queue. Another attempt to update property
+                            # should happen.
+                            self.akamai_driver.san_mapping_queue.enqueue_san_mapping(
+                                json.dumps(cert_obj.to_dict()))
+                            return current_status
                     else:
                         return "failed"
                 else:
