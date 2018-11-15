@@ -39,8 +39,14 @@ RACKSPACE_OPTIONS = [
                'creating subdomains'),
     cfg.StrOpt('auth_endpoint', default='',
                help='Authentication end point for DNS'),
+    cfg.StrOpt('sni_ssl_domain_suffix', default='edgekey.net',
+               help='SNI ssl domain suffix'),
+    cfg.StrOpt('temp_cname_domain', default='origin.raxcdn.com',
+               help='Pre-defined domain to temp cname while'
+               ' provider domain becomes available'),
     cfg.IntOpt('timeout', default=30, help='DNS response timeout'),
     cfg.IntOpt('delay', default=1, help='DNS retry delay'),
+
 ]
 
 RACKSPACE_GROUP = 'drivers:dns:rackspace'

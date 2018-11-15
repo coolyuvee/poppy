@@ -240,6 +240,7 @@ class ServiceController(base.ServiceBase):
 
             ids = []
             links = []
+            upgraded_domains_links = []
             domains_certificate_status = {}
             # in this case we need to copy
             # and tweak the content of one old policy
@@ -428,12 +429,30 @@ class ServiceController(base.ServiceBase):
                             ].get_domain_access_url(classified_domain.domain)
                             old_operator_url = (
                                 None if domain_access_url is None else
-                                domain_access_url.get('old_operator_url', None)
+                                domain_access_url.get('operator_url', None)# perhaps operator_url instead of old_operator_url?
                             )
                             domains_certificate_status[
                                 classified_domain.domain] = (
                                 classified_domain.cert_info.get_cert_status())
                             if edge_host_name is None:
+                                links.append({
+                                    'href': None,
+                                    'rel': 'access_url',
+                                    'domain': dp,
+                                    'certificate': classified_domain.certificate,
+                                    'old_operator_url': old_operator_url
+                                })
+                                # upgraded_domains_link = {
+                                #     'href': None,
+                                #     'rel': 'access_url',
+                                #     'domain': dp,
+                                #     'certificate': classified_domain.certificate,
+                                #     'old_operator_url': (
+                                #         None if domain_access_url is None else
+                                #         domain_access_url.get('operator_url', None)
+                                #     )
+                                # }
+                                # upgraded_domains_links.append(upgraded_domains_link)
                                 continue
                     provider_access_url = self._get_provider_access_url(
                         classified_domain, dp, edge_host_name)
@@ -470,6 +489,11 @@ class ServiceController(base.ServiceBase):
                     # old http policy. the old http policy will be deleted
                     # later.
                     if is_upgrade is True:
+                        for link in upgraded_domains_links:
+                            if link['domain'] == policy['policy_name']:
+                                links.append(link)
+                                break
+
                         LOG.info(
                             "{0} was upgraded from http to https san. "
                             "Queuing old http policy for delete.".format(

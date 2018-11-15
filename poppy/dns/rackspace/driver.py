@@ -38,12 +38,17 @@ RACKSPACE_OPTIONS = [
                help='The shard prefix to use'),
     cfg.IntOpt('shared_ssl_num_shards', default=5, help='Number of Shards '
                'to use in generating shared ssl domain suffix'),
+    cfg.StrOpt('sni_ssl_domain_suffix', default='edgekey.net',
+               help='SNI ssl domain suffix'),
     cfg.StrOpt('shared_ssl_shard_prefix', default='scdn',
                help='The shard prefix to use '
                'in generating shared ssl domain suffix'),
     cfg.StrOpt('shared_ssl_domain_suffix', default='',
                help='The shared ssl domain suffix to generate'
                ' shared ssl domain'),
+    cfg.StrOpt('temp_cname_domain', default='origin.raxcdn.com',
+               help='Pre-defined domain to temp cname while'
+               ' provider domain becomes available'),
     cfg.StrOpt('url', default='',
                help='The url for customers to CNAME to'),
     cfg.StrOpt('email', help='The email to be provided to Rackspace DNS for'
@@ -75,6 +80,8 @@ class DNSProvider(base.Driver):
         pyrax.set_credentials(self.rackdns_conf.username,
                               self.rackdns_conf.api_key)
         self.rackdns_client = pyrax.cloud_dns
+        self.sni_domain_suffix = self.rackdns_conf.sni_ssl_domain_suffix
+        self.temp_cname_domain = self.rackdns_conf.temp_cname_domain
         self.rackdns_client.set_timeout(self.rackdns_conf.timeout)
         self.rackdns_client.set_delay(self.rackdns_conf.delay)
 

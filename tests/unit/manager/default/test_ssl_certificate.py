@@ -16,12 +16,14 @@
 import ddt
 import json
 import mock
+from mock import ANY
 from oslo_config import cfg
 import testtools
 
 from poppy.manager.default import driver
 from poppy.manager.default import ssl_certificate
 from poppy.model import ssl_certificate as ssl_cert_model
+from poppy.model.service import Service
 from poppy.transport.validators import helpers as validators
 from tests.unit import base
 
@@ -338,6 +340,51 @@ class DefaultSSLCertificateControllerTests(base.TestCase):
             True,
             self.scc.distributed_task_controller.submit_task.called
         )
+
+    def test_rerun_san_retry_list_taskflow_args(self):
+        """Test required args.
+
+        When `rerun_san_retry_list` is called, it invokes
+        `recreate_ssl_certificate` flow. Test that all the
+        required kwargs are passed to that flow.
+        """
+        mod_san_queue = self.manager_driver.providers['akamai'].obj.mod_san_queue
+        mod_san_queue.mod_san_queue_backend = mock.MagicMock()
+        mod_san_queue.mod_san_queue_backend.__len__.side_effect = [1, 0]
+        mod_san_queue.dequeue_mod_san_request.side_effect = [
+            bytearray(json.dumps({
+                "domain_name": "test.domain.com",
+                "project_id": "00000",
+                "cert_type": "san",
+                "flavor_id": "flavor",
+                "validate_service": True
+            }), encoding='utf-8')
+        ]
+
+        service_obj = Service(service_id="a1B2c3",
+                              name='mock_service',
+                              domains=['test.domain.com'],
+                              origins=[],
+                              flavor_id='flavor',
+                              project_id="00000")
+        self.scc.service_storage.get_service_details_by_domain_name. \
+            return_value = service_obj
+
+        self.scc.storage.get_certs_by_domain. \
+            side_effect = ValueError
+
+        self.scc.rerun_san_retry_list()
+
+        self.scc.distributed_task_controller.submit_task. \
+            assert_called_once_with(ANY,
+                                    cert_list_json=ANY,
+                                    cert_type='san',
+                                    context_dict=ANY,
+                                    domain_name='test.domain.com',
+                                    enqueue=False,
+                                    project_id='00000',
+                                    providers_list_json=ANY,
+                                    service_id='a1B2c3')
 
     def test_rerun_san_retry_list_exception_service_validation(self):
         mod_san_queue = self.manager_driver.providers[

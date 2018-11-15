@@ -44,6 +44,11 @@ RACKSPACE_OPTIONS = [
                'creating subdomains'),
     cfg.StrOpt('auth_endpoint', default='',
                help='Authentication end point for DNS'),
+    cfg.StrOpt('sni_ssl_domain_suffix', default='edgekey.net',
+               help='SNI ssl domain suffix'),
+    cfg.StrOpt('temp_cname_domain', default='origin.raxcdn.com',
+               help='Pre-defined domain to temp cname while'
+               ' provider domain becomes available'),
     cfg.IntOpt('timeout', default=30, help='DNS response timeout'),
     cfg.IntOpt('delay', default=1, help='DNS retry delay'),
 ]
@@ -82,26 +87,113 @@ class TestServicesCreate(base.TestCase):
         self.controller = provider.services_controller
         self.controller.client = self.client
 
-    def test_create_with_no_links(self):
+    def test_create_with_domain_none(self):
+        """Test the `create()` with `None` domain."""
         responders = [{
             'Akamai': {
                 'id': str(uuid.uuid4()),
-                'links': []
-            },
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': []
+                'links': [],
+                'domains_certificate_status':{'test.akamai.com':'deployed'}
             }
         }]
-
         subdomain = mock.Mock()
         subdomain.add_records = mock.Mock()
         self.client.find = mock.Mock(return_value=subdomain)
-        dns_details = self.controller.create(responders)
+        cert_domains = [{"test.akamai.com": None}]
+        dns_details = self.controller.create(responders, cert_domains=cert_domains )
+
+        """Below is a sample output returned from the above `create()` method.
+        
+        .. code-block:: python
+        
+            {
+                "Fastly": {
+                    "access_urls": [{
+                        "provider_url": "origin.raxcdn.com",
+                        "domain": "test.fastly.com",
+                        "operator_url": "'test.fastly.com.cdn275.mycdn.com'"
+                    }]
+                },
+                "Akamai": {
+                    "access_urls": [{
+                        "provider_url": "origin.raxcdn.com",
+                        "domain": "test.akamai.com",
+                        "operator_url": "test.akamai.com.cdn275.mycdn.com"
+                    }]
+                }
+             }
+        """
 
         for responder in responders:
             for provider_name in responder:
-                self.assertEqual([], dns_details[provider_name]['access_urls'])
+                access_urls = dns_details[provider_name]['access_urls'][0]
+                domain = responder[provider_name]['domains_certificate_status'].keys()[0]
+                op_url = access_urls['operator_url']
+                self.assertEqual(access_urls['provider_url'],
+                                 self.conf[RACKSPACE_GROUP].temp_cname_domain)
+                self.assertEqual(access_urls['domain'], domain)
+                self.assertIn(domain, op_url)
+
+    def test_create_with_domain(self):
+        """Test the `create()` with cps certificate"""
+        responders = [{
+            'Akamai': {
+                'id': str(uuid.uuid4()),
+                'links': [],
+                'domains_certificate_status':{'test.akamai.com':'deployed'}
+            }
+        }]
+        subdomain = mock.Mock()
+        subdomain.add_records = mock.Mock()
+        self.client.find = mock.Mock(return_value=subdomain)
+        cert_domains_1 = [{"test.akamai.com": "securedX.sniX.altcdn.com"}]
+        cert_domains_2 = [{"test.akamai.com": "securedX.sniX.altcdn.com.edgekey.net"}]
+        dns_details_1 = self.controller.create(responders,
+                                               cert_domains=cert_domains_1)
+        dns_details_2 = self.controller.create(responders,
+                                               cert_domains=cert_domains_2)
+
+        """Below is a sample output returned from the above `create()` method.
+        
+        Both `dns_details_1` and `dns_details_2` should be having the same
+        output.
+        
+        
+        .. code-block:: python
+
+            {
+                'Fastly': {'access_urls': []}, 
+                'Akamai': 
+                    {
+                        'access_urls': 
+                            [
+                                {
+                                    'provider_url': 'securedX.sniX.altcdn.com.edgekey.net', 
+                                    'domain': 'test.akamai.com', 
+                                    'operator_url': 'test.akamai.com.cdn124.mycdn.com'
+                                 }
+                            ]
+                    }
+            }
+        """
+        for responder in responders:
+            for provider_name in responder:
+
+                access_urls = dns_details_1[provider_name]['access_urls'][0]
+                domain = responder[provider_name]['domains_certificate_status'].keys()[0]
+                op_url = access_urls['operator_url']
+                self.assertEqual(access_urls['provider_url'],
+                                 'securedX.sniX.altcdn.com.edgekey.net')
+                self.assertEqual(access_urls['domain'], domain)
+                self.assertIn(domain, op_url)
+
+                access_urls = dns_details_2[provider_name]['access_urls'][0]
+                domain = responder[provider_name]['domains_certificate_status'].keys()[0]
+                op_url = access_urls['operator_url']
+                self.assertEqual(access_urls['provider_url'],
+                                 'securedX.sniX.altcdn.com.edgekey.net')
+                self.assertEqual(access_urls['domain'], domain)
+                self.assertIn(domain, op_url)
 
     def test_create_with_provider_error(self):
 
@@ -607,6 +699,11 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed',
+                    'pictures.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -626,9 +723,15 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'},
+            {'pictures.domain.com': 'securedZ.sni1.altcdn.com'}
+        ]
         dns_details = self.controller.update(self.service_old,
                                              service_updates,
-                                             responders)
+                                             responders,
+                                             cert_domains)
         for responder in responders:
             for provider_name in responder:
                     self.assertIsNotNone(dns_details[provider_name]['error'])
@@ -655,6 +758,11 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed',
+                    'pictures.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -674,10 +782,16 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'},
+            {'pictures.domain.com': 'securedZ.sni1.altcdn.com'}
+        ]
         dns_details = self.controller.update(
             self.service_old,
             service_updates,
-            responders
+            responders,
+            cert_domains
         )
 
         access_urls_map = {}
@@ -746,6 +860,10 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'blog.domain.com',
@@ -760,9 +878,15 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'}
+        ]
+
         dns_details = self.controller.update(self.service_old,
                                              service_updates,
-                                             responders)
+                                             responders,
+                                             cert_domains)
         access_urls_map = {}
         for provider_name in dns_details:
             access_urls_map[provider_name] = {}
@@ -790,6 +914,9 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -798,10 +925,14 @@ class TestServicesUpdate(base.TestCase):
                     }
                 ]}
             }]
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'}
+        ]
 
         dns_details = self.controller.update(self.service_old,
                                              service_updates,
-                                             responders)
+                                             responders,
+                                             cert_domains)
         access_urls_map = {}
         for provider_name in dns_details:
             access_urls_map[provider_name] = {}
@@ -827,6 +958,10 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'blog.domain.com',
@@ -841,9 +976,14 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'},
+        ]
         dns_details = self.controller.update(self.service_old,
                                              service_updates,
-                                             responders)
+                                             responders,
+                                             cert_domains)
         access_urls_map = {}
         for provider_name in dns_details:
             access_urls_map[provider_name] = {}
@@ -878,6 +1018,11 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com':'deployed',
+                    'blog.domain.com': 'deployed',
+                    'pictures.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -899,9 +1044,16 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'},
+            {'pictures.domain.com': 'securedZ.sni1.altcdn.com'}
+        ]
+
         dns_details = self.controller.update(self.service_old,
                                              service_new,
-                                             responders)
+                                             responders,
+                                             cert_domains)
         access_urls_map = {}
         for provider_name in dns_details:
             access_urls_map[provider_name] = {}
@@ -937,6 +1089,10 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -952,11 +1108,15 @@ class TestServicesUpdate(base.TestCase):
                     }
                 ]}
             }]
-
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'}
+        ]
         dns_details = self.controller.update(
             self.service_old,
             service_new,
-            responders
+            responders,
+            cert_domains
         )
 
         access_urls_map = {}
@@ -996,6 +1156,10 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -1012,10 +1176,15 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'}
+        ]
         dns_details = self.controller.update(
             self.service_old,
             service_new,
-            responders
+            responders,
+            cert_domains
         )
         self.assertTrue('error' in dns_details['Fastly'])
         self.assertTrue('error_detail' in dns_details['Fastly'])
@@ -1046,6 +1215,10 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -1062,10 +1235,15 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'}
+        ]
         dns_details = self.controller.update(
             self.service_old,
             service_new,
-            responders
+            responders,
+            cert_domains
         )
 
         access_urls_map = {}
@@ -1103,6 +1281,11 @@ class TestServicesUpdate(base.TestCase):
         responders = [{
             'Fastly': {
                 'id': str(uuid.uuid4()),
+                'domains_certificate_status': {
+                    'test.domain.com': 'deployed',
+                    'blog.domain.com': 'deployed',
+                    'pictures.domain.com': 'deployed'
+                },
                 'links': [
                     {
                         'domain': u'test.domain.com',
@@ -1122,9 +1305,15 @@ class TestServicesUpdate(base.TestCase):
                 ]}
             }]
 
+        cert_domains = [
+            {'test.domain.com': 'securedX.sni1.altcdn.com'},
+            {'blog.domain.com': 'securedY.sni1.altcdn.com.edgekey.net'},
+            {'pictures.domain.com': 'securedZ.sni1.altcdn.com'}
+        ]
         dns_details = self.controller.update(self.service_old,
                                              service_new,
-                                             responders)
+                                             responders,
+                                             cert_domains)
         access_urls_map = {}
         for provider_name in dns_details:
             access_urls_map[provider_name] = {}

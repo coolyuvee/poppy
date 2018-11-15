@@ -23,7 +23,7 @@ from oslo_context import context as context_utils
 from oslo_log import log
 
 from poppy.common import errors
-from poppy.distributed_task.taskflow.flow import create_service
+from poppy.distributed_task.taskflow.flow import create_service, create_ssl_certificate
 from poppy.distributed_task.taskflow.flow import delete_service
 from poppy.distributed_task.taskflow.flow import purge_service
 from poppy.distributed_task.taskflow.flow import update_service
@@ -302,6 +302,35 @@ class DefaultServicesController(base.ServicesController):
             'context_dict': context_utils.get_current().to_dict()
         }
 
+        all_domains = service_json['domains']
+        cert_obj_list = []
+
+        for domain in all_domains:
+            cert_type = domain.get('certificate', None)
+            domain_name = domain['domain']
+
+            # TODO:
+            # Some thing special for 'shared' types?
+            # Or should we treat them same like 'sni ' and 'san'
+            if cert_type:
+                cert_obj = ssl_certificate.SSLCertificate(flavor.flavor_id,
+                                                          domain_name,
+                                                          cert_type,
+                                                          project_id,
+                                                          {})
+                cert_obj_list.append(cert_obj.to_dict())
+                try:
+                    self.ssl_certificate_storage.create_certificate(
+                        project_id,
+                        cert_obj
+                    )
+                except ValueError as e:
+                    raise e
+            else:
+                cert_obj_list.append(None)
+
+        kwargs['cert_list_json'] = json.dumps(cert_obj_list)
+
         self.distributed_task_controller.submit_task(
             create_service.create_service, **kwargs)
 
@@ -468,7 +497,7 @@ class DefaultServicesController(base.ServicesController):
                             new_cert_obj = ssl_certificate.SSLCertificate(
                                 service_new.flavor_id,
                                 domain.domain,
-                                'san',
+                                domain.certificate,#'san', #domain.certificate,???
                                 project_id,
                                 new_cert_detail
                             )
@@ -533,6 +562,44 @@ class DefaultServicesController(base.ServicesController):
             'time_seconds': self.determine_sleep_times(),
             'context_dict': context_utils.get_current().to_dict()
         }
+
+        try:
+            flavor = self.flavor_controller.get(service_new_json.get('flavor_id'))
+        except LookupError as e:
+            raise e
+
+        cert_obj_list = []
+        providers = [p.provider_id for p in flavor.providers]
+        kwargs['providers_list_json'] = json.dumps(providers)
+
+        new_domains = set([d.domain for d in service_new.domains])
+        old_domains = set([d.domain for d in service_old.domains])
+        added_domains = list(new_domains.difference(old_domains))
+
+        # # Add upgraded domains to create ssl certificate for them
+        # for domain in service_new.domains:
+        #     if self._detect_upgrade_http_to_https(service_old.domains, domain):
+        #         cert_obj = ssl_certificate.SSLCertificate(flavor.flavor_id,
+        #                                                   domain.domain,
+        #                                                   domain.certificate,
+        #                                                   project_id,
+        #                                                   {})
+        #         cert_obj_list.append(cert_obj.to_dict())
+
+        # Add new domains to create ssl certificate for them
+        for domain_name in added_domains:
+            domain = [d for d in service_new.domains if d.domain == domain_name][0]
+            if domain.certificate:
+                cert_obj = ssl_certificate.SSLCertificate(flavor.flavor_id,
+                                                          domain.domain,
+                                                          domain.certificate,
+                                                          project_id,
+                                                          {})
+                cert_obj_list.append(cert_obj.to_dict())
+            else:
+                cert_obj_list.append(None)
+
+        kwargs['cert_list_json'] = json.dumps(cert_obj_list)
 
         self.distributed_task_controller.submit_task(
             update_service.update_service, **kwargs)

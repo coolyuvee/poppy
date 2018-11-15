@@ -30,7 +30,6 @@ from poppy.distributed_task.utils import memoized_controllers
 from poppy.model.helpers import provider_details
 from poppy.transport.pecan.models.request import service
 
-
 LOG = log.getLogger(__name__)
 
 conf = cfg.CONF
@@ -38,7 +37,9 @@ conf(project='poppy', prog='poppy', args=[])
 
 DNS_OPTIONS = [
     cfg.IntOpt('retries', default=5,
-               help='Total number of Retries after Exponentially Backing Off')
+               help='Total number of Retries after Exponentially Backing Off'),
+    cfg.StrOpt('sni_ssl_domain_suffix', default='edgekey.net',
+               help='SNI ssl domain suffix'),
 ]
 
 DNS_GROUP = 'driver:dns'
@@ -49,14 +50,32 @@ conf.register_opts(DNS_OPTIONS, group=DNS_GROUP)
 class UpdateProviderServicesTask(task.Task):
     default_provides = "responders"
 
-    def execute(self, service_old, service_obj):
+    def execute(self, service_old, service_obj, project_id):
         service_controller = memoized_controllers.task_controllers('poppy')
+
+        _, self.ssl_certificate_manager = \
+            memoized_controllers.task_controllers('poppy', 'ssl_certificate')
+
+        self.ssl_certificate_storage = self.ssl_certificate_manager.storage
 
         service_old_json = json.loads(service_old)
         service_obj_json = json.loads(service_obj)
 
         service_old = service.load_from_json(service_old_json)
         service_obj = service.load_from_json(service_obj_json)
+
+        for domain in service_obj.domains:
+            if domain.certificate in ['san', 'sni']:
+                try:
+                    domain.cert_info = (
+                        self.ssl_certificate_storage.get_certs_by_domain(
+                            domain.domain,
+                            project_id=project_id,
+                            flavor_id=service_obj.flavor_id,
+                            cert_type=domain.certificate
+                            ))
+                except ValueError:
+                    domain.cert_info = None
 
         responders = []
         # update service with each provider present in provider_details
@@ -71,18 +90,79 @@ class UpdateProviderServicesTask(task.Task):
         return responders
 
 
+class UpdateCnameRecord(task.Task):
+
+    def execute(self, project_id, service_id, cert_domains=None):
+        """Updates the mapping between dns service and provider url.
+
+        Typically, this Task is invoked from `recreate_ssl_certificate`
+        flow. This generally means customer's vanity domain is pointing
+        to a temporary placeholder domain like `origin.raxcdn.com`.
+
+        When the `retry_rerun_list` is invoked by admin and if there
+        is an active CPS cert available, update the temporary domain
+        with the available certificate.
+
+        If there wasn't any available CPS cert, do nothing and the
+        certificate object will be put back into `mod_san_queue`
+        automatically.
+
+        :param unicode project_id: Id of the Project
+        :param unicode service_id: Id of the Service
+        :param list cert_domain: List of the CPS certificates.
+          Iterate the list:
+            If CPS cert is None, do nothing and certificate
+                will be put back into queue.
+            Else, update it with
+                the temporary placeholder domain
+        """
+
+        service_controller, dns = \
+            memoized_controllers.task_controllers('poppy', 'dns')
+
+        service_controller, self.storage_controller = \
+            memoized_controllers.task_controllers('poppy', 'storage')
+
+        for cps_certs in cert_domains:
+            cps_cert = cps_certs.values()[0]
+            if cps_cert:
+                try:
+                    provider_details = self.storage_controller.get_provider_details(
+                        project_id,
+                        service_id)
+                except Exception as e:
+                    LOG.ERROR("Cannot proceed to update cname records."
+                              "Reason: Unable to get provider details for "
+                              "project {0} and service {1}."
+                              "Error details: {2}".format(project_id,
+                                                          service_id,
+                                                          str(e)))
+                    return
+
+                access_urls = provider_details["Akamai"].access_urls
+                source_url = access_urls[0].get('operator_url')
+                sni_domain_suffix = conf[DNS_GROUP].sni_ssl_domain_suffix
+
+                if not cps_cert.endswith(sni_domain_suffix):
+                    cps_cert += '.' + sni_domain_suffix
+
+                dns.modify_cname(source_url, cps_cert)
+                LOG.info("Successfully updated cname for {0} "
+                         "to {1}".format(source_url, cps_cert))
+
+
 class UpdateServiceDNSMappingTask(task.Task):
     default_provides = "dns_responder"
 
     def execute(self, responders, retry_sleep_time,
-                service_old, service_obj, project_id, service_id):
+                service_old, service_obj, project_id, service_id, cert_domains):
         service_controller, dns = \
             memoized_controllers.task_controllers('poppy', 'dns')
         service_obj_json = json.loads(service_obj)
         service_obj = service.load_from_json(service_obj_json)
         service_old_json = json.loads(service_old)
         service_old = service.load_from_json(service_old_json)
-        dns_responder = dns.update(service_old, service_obj, responders)
+        dns_responder = dns.update(service_old, service_obj, responders, cert_domains)
 
         for provider_name in dns_responder:
             try:
@@ -148,9 +228,9 @@ class UpdateServiceDNSMappingTask(task.Task):
                     for provider_name in responder:
                         provider_service_id = (
                             service_controller._driver.
-                            providers[provider_name.lower()].obj.
-                            service_controller.
-                            get_provider_service_id(service_obj))
+                                providers[provider_name.lower()].obj.
+                                service_controller.
+                                get_provider_service_id(service_obj))
                         provider_details_dict[provider_name] = (
                             provider_details.ProviderDetail(
                                 provider_service_id=provider_service_id,
@@ -201,7 +281,6 @@ class GatherProviderDetailsTask(task.Task):
 
     def execute(self, responders, dns_responder, log_responders, project_id,
                 service_id, service_obj):
-
         service_controller, self.storage_controller = \
             memoized_controllers.task_controllers('poppy', 'storage')
         service_obj_json = json.loads(service_obj)
@@ -246,7 +325,7 @@ class GatherProviderDetailsTask(task.Task):
                         if not any('log_delivery' in access_url
                                    for access_url in access_urls):
                             access_urls.append({'log_delivery':
-                                                log_responders})
+                                                    log_responders})
                     provider_details_dict[provider_name] = (
                         provider_details.ProviderDetail(
                             provider_service_id=responder[provider_name]['id'],
@@ -289,7 +368,6 @@ class UpdateProviderDetailsTask_Errors(task.Task):
 
     def execute(self, provider_details_dict_error_tuple, project_id,
                 service_id, service_old, service_obj):
-
         (provider_details_dict, error_flag) = provider_details_dict_error_tuple
         service_controller, self.storage_controller = \
             memoized_controllers.task_controllers('poppy', 'storage')
@@ -363,8 +441,8 @@ class DeleteCertsForRemovedDomains(task.Task):
         old_domains = set([
             domain.domain for domain in service_old.domains
             if domain.protocol == 'https'
-            and
-            domain.certificate in ['san', 'sni']
+               and
+               domain.certificate in ['san', 'sni']
         ])
 
         # get new domains
@@ -373,8 +451,8 @@ class DeleteCertsForRemovedDomains(task.Task):
         new_domains = set([
             domain.domain for domain in service_new.domains
             if domain.protocol == 'https'
-            and
-            domain.certificate in ['san', 'sni']
+               and
+               domain.certificate in ['san', 'sni']
         ])
 
         removed_domains = old_domains.difference(new_domains)

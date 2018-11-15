@@ -30,7 +30,7 @@ from poppy.distributed_task.taskflow.flow import update_service
 from poppy.distributed_task.taskflow.flow import update_service_state
 from poppy.distributed_task.taskflow.task import common
 from poppy.distributed_task.utils import memoized_controllers
-from poppy.model.helpers import domain
+from poppy.model.helpers import domain, provider_details
 from poppy.model.helpers import origin
 from poppy.model import service
 from poppy.model import ssl_certificate
@@ -133,6 +133,10 @@ class TestFlowRuns(base.TestCase):
         service_controller.distributed_task_controller.submit_task = mock.Mock()
         service_controller._driver = mock.Mock()
         service_controller._driver.providers.__getitem__ = mock.Mock()
+        service_controller.provider_wrapper.create_certificate = mock.Mock()
+        service_controller.provider_wrapper.create_certificate. \
+            _mock_return_value = {"Akamai":{"cert_domain":"securedX.sni1.altcdn.com"}}
+
         dns_controller.update = mock.Mock()
         dns_controller.update._mock_return_value = []
         common.create_log_delivery_container = mock.Mock()
@@ -180,7 +184,7 @@ class TestFlowRuns(base.TestCase):
         storage_controller._driver.close_connection = mock.Mock()
         service_controller.provider_wrapper.create_certificate = mock.Mock()
         service_controller.provider_wrapper.create_certificate.\
-            _mock_return_value = []
+            _mock_return_value = {"Akamai":{"cert_domain":"securedX.sni1.altcdn.com"}}
         service_controller._driver = mock.Mock()
         service_controller._driver.providers.__getitem__ = mock.Mock()
         service_controller._driver.notification = [mock.Mock()]
@@ -241,9 +245,15 @@ class TestFlowRuns(base.TestCase):
         storage_controller.get = mock.Mock()
         storage_controller.update = mock.Mock()
         storage_controller._driver.close_connection = mock.Mock()
+
+        storage_controller.get_provider_details = mock.Mock()
+        providerDetails = provider_details.ProviderDetail(
+            access_urls=[{"operator_url": "testsite.domain.com.cdn345.altcdn.com"}])
+        storage_controller.get_provider_details.return_value = {"Akamai":providerDetails}
+
         service_controller.provider_wrapper.create_certificate = mock.Mock()
         service_controller.provider_wrapper.create_certificate.\
-            _mock_return_value = []
+            _mock_return_value = {"Akamai":{"cert_domain":"securedX.sni1.altcdn.com"}}
         service_controller._driver = mock.Mock()
         service_controller._driver.providers.__getitem__ = mock.Mock()
         service_controller._driver.notification = [mock.Mock()]
@@ -258,9 +268,11 @@ class TestFlowRuns(base.TestCase):
             'project_id': json.dumps(str(uuid.uuid4())),
             'auth_token': json.dumps(str(uuid.uuid4())),
             'service_id': json.dumps(str(uuid.uuid4())),
+            'cert_obj_json': None,
             'time_seconds': [i * self.time_factor
                              for i in range(self.total_retries)],
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json': json.dumps([]),
         }
 
         (
@@ -296,6 +308,11 @@ class TestFlowRuns(base.TestCase):
                                       domains=[domains_new],
                                       origins=[current_origin],
                                       flavor_id='cdn')
+        cert_obj = ssl_certificate.SSLCertificate('cdn',
+                                                  domains_new.domain,
+                                                  'sni',
+                                                  str(uuid.uuid4()),
+                                                  {})
 
         kwargs = {
             'project_id': json.dumps(str(uuid.uuid4())),
@@ -305,7 +322,10 @@ class TestFlowRuns(base.TestCase):
                              for i in range(self.total_retries)],
             'service_old': json.dumps(service_old.to_dict()),
             'service_obj': json.dumps(service_new.to_dict()),
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json':json.dumps([cert_obj.to_dict()]),
+            'providers_list_json':json.dumps(["Akamai"])
+
         }
 
         (
@@ -454,9 +474,11 @@ class TestFlowRuns(base.TestCase):
             'project_id': json.dumps(str(uuid.uuid4())),
             'auth_token': json.dumps(str(uuid.uuid4())),
             'service_id': json.dumps(str(uuid.uuid4())),
+            'cert_obj_json': None,
             'time_seconds': [i * self.time_factor for
                              i in range(self.total_retries)],
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json': json.dumps([])
         }
 
         (
@@ -508,7 +530,10 @@ class TestFlowRuns(base.TestCase):
                              i in range(self.total_retries)],
             'service_old': json.dumps(service_old.to_dict()),
             'service_obj': json.dumps(service_new.to_dict()),
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json': json.dumps([]),
+            'providers_list_json': json.dumps(['Akamai']),
+
         }
 
         (
@@ -671,7 +696,9 @@ class TestFlowRuns(base.TestCase):
                              i in range(self.total_retries)],
             'service_old': json.dumps(service_old.to_dict()),
             'service_obj': json.dumps(service_new.to_dict()),
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json': json.dumps([]),
+            'providers_list_json': json.dumps(['Akamai']),
         }
 
         (
@@ -722,7 +749,9 @@ class TestFlowRuns(base.TestCase):
                              i in range(self.total_retries)],
             'service_old': json.dumps(service_old.to_dict()),
             'service_obj': json.dumps(service_new.to_dict()),
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json': json.dumps([]),
+            'providers_list_json': json.dumps(['Akamai']),
         }
 
         (
@@ -756,6 +785,7 @@ class TestFlowRuns(base.TestCase):
             'project_id': json.dumps(str(uuid.uuid4())),
             'auth_token': json.dumps(str(uuid.uuid4())),
             'service_id': json.dumps(str(uuid.uuid4())),
+            'cert_list_json': json.dumps([]),
             'time_seconds': [i * self.time_factor for
                              i in range(self.total_retries)],
             'context_dict': context_utils.RequestContext().to_dict()
@@ -793,6 +823,7 @@ class TestFlowRuns(base.TestCase):
             'project_id': json.dumps(str(uuid.uuid4())),
             'auth_token': json.dumps(str(uuid.uuid4())),
             'service_id': json.dumps(str(uuid.uuid4())),
+            'cert_list_json': json.dumps([]),
             'time_seconds': [i * self.time_factor for
                              i in range(self.total_retries)],
             'context_dict': context_utils.RequestContext().to_dict()
@@ -1017,13 +1048,13 @@ class TestFlowRuns(base.TestCase):
     def test_create_ssl_certificate_normal(self):
 
         providers = ['cdn_provider']
-        cert_obj_json = ssl_certificate.SSLCertificate('cdn',
+        cert_obj = ssl_certificate.SSLCertificate('cdn',
                                                        'mytestsite.com',
                                                        'san')
         kwargs = {
             'providers_list_json': json.dumps(providers),
             'project_id': json.dumps(str(uuid.uuid4())),
-            'cert_obj_json': json.dumps(cert_obj_json.to_dict()),
+            'cert_list_json': json.dumps([cert_obj.to_dict()]),
             'context_dict': context_utils.RequestContext().to_dict()
         }
 
@@ -1049,7 +1080,7 @@ class TestFlowRuns(base.TestCase):
     def test_recreate_ssl_certificate(self):
 
         providers = ['cdn_provider']
-        cert_obj_json = ssl_certificate.SSLCertificate('cdn',
+        cert_obj = ssl_certificate.SSLCertificate('cdn',
                                                        'mytestsite.com',
                                                        'san')
         kwargs = {
@@ -1057,8 +1088,9 @@ class TestFlowRuns(base.TestCase):
             'project_id': json.dumps(str(uuid.uuid4())),
             'domain_name': 'mytestsite.com',
             'cert_type': 'san',
-            'cert_obj_json': json.dumps(cert_obj_json.to_dict()),
-            'context_dict': context_utils.RequestContext().to_dict()
+            'cert_list_json': json.dumps([cert_obj.to_dict()]),
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'service_id': ''
         }
 
         (
@@ -1229,7 +1261,9 @@ class TestFlowRuns(base.TestCase):
                              for i in range(self.total_retries)],
             'service_old': json.dumps(service_old.to_dict()),
             'service_obj': json.dumps(service_new.to_dict()),
-            'context_dict': context_utils.RequestContext().to_dict()
+            'context_dict': context_utils.RequestContext().to_dict(),
+            'cert_list_json': json.dumps([]),
+            'providers_list_json': json.dumps(["Akamai"])
         }
 
         (

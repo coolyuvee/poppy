@@ -292,7 +292,7 @@ class DefaultManagerServiceTests(base.TestCase):
                 self.service_id)
             create_dns = create_service_tasks.CreateServiceDNSMappingTask()
             dns_responder = create_dns.execute(responders, 0, self.project_id,
-                                               self.service_id)
+                                               self.service_id, None)
             gather_provider = create_service_tasks.GatherProviderDetailsTask()
             log_responder = \
                 create_service_tasks.CreateLogDeliveryContainerTask()
@@ -319,14 +319,15 @@ class DefaultManagerServiceTests(base.TestCase):
             service_updates_json = json.dumps(service_updates)
             responders = update_provider.execute(
                 service_old,
-                service_updates_json
+                service_updates_json,
+                self.project_id
             )
             update_dns = update_service_tasks.UpdateServiceDNSMappingTask()
 
             dns_responder = update_dns.execute(responders, 0, service_old,
                                                service_updates_json,
                                                self.project_id,
-                                               self.service_id)
+                                               self.service_id, [{None}])
 
             log_delivery_update = \
                 update_service_tasks.UpdateLogDeliveryContainerTask()
@@ -448,6 +449,7 @@ class DefaultManagerServiceTests(base.TestCase):
         self.sc.storage_controller.get_service_count = mock.Mock(
             return_value=1)
 
+
         service_obj = self.sc.create_service(
             self.project_id,
             self.auth_token,
@@ -459,6 +461,81 @@ class DefaultManagerServiceTests(base.TestCase):
             self.project_id,
             service_obj
         )
+
+    @ddt.file_data('data_service_create.json')
+    def test_create_service_with_args(self, service_json):
+        """Test all the args for create_service flow.
+
+        Create service with HTTP and HTTPS domain.
+        Test that it calls 'create_service' taskflow with
+        all the required kwargs.
+        """
+        self.sc.flavor_controller.get.return_value = flavor.Flavor(
+            "cdn",
+            [ flavor.Provider("akamai", "www.akamai.com") ]
+        )
+
+        for service_dict in service_json:
+
+            service_dict.update(name=self.service_name)
+
+            self.sc.storage_controller.get_service_limit = mock.Mock(
+                return_value=self.max_services_per_project)
+
+            self.sc.storage_controller.get_service_count = mock.Mock(
+                return_value=1)
+
+            service_obj = self.sc.create_service(
+                self.project_id,
+                self.auth_token,
+                service_dict
+            )
+
+            # Test that 'create_service' is called with correct args
+            self.sc.storage_controller.create_service.assert_called_once_with(
+                self.project_id,
+                service_obj
+            )
+
+            all_http_domains = True
+            for domain in service_dict['domains']:
+                if domain.protocol == 'https':
+                    all_http_domains = False
+
+            # Test that 'create_certificate' is called when at least one
+            # of the domain is HTTPS. If all the domains are HTTP, then
+            # this should not be called
+            if not all_http_domains:
+                self.sc.ssl_certificate_storage.create_certificate.assert_called_with(
+                    self.project_id,
+                    mock.ANY,
+                )
+                arg_type = self.sc.ssl_certificate_storage.create_certificate.call_args[0][1]
+                self.assertTrue(isinstance(arg_type, ssl_certificate.SSLCertificate))
+
+
+            # Test that correct 'create_service' flow is called
+            task_called = self.sc.distributed_task_controller.submit_task.call_args
+            taskflow_name = task_called[0][0]
+            self.assertEqual(taskflow_name.__name__, 'create_service')
+
+            # Test the `cert_list_json` has all the domains in it
+            cert_list = json.loads(task_called[1]['cert_list_json'])
+            self.assertEqual(len(cert_list), len(service_dict['domains']))
+
+            # Now Test all the arguments passed to the 'create_service' Flow
+            self.sc.distributed_task_controller.submit_task.assert_called_with(
+                mock.ANY,
+                project_id = self.project_id,
+                providers_list_json='["akamai"]',
+                cert_list_json = mock.ANY,
+                time_seconds=mock.ANY,
+                service_id = mock.ANY,
+                context_dict = mock.ANY,
+                auth_token = mock.ANY,
+            )
+
+
 
     @ddt.file_data('data_provider_details.json')
     def test_create_service_worker(self, provider_details_json):
@@ -676,6 +753,163 @@ class DefaultManagerServiceTests(base.TestCase):
                                        'put',
                                        return_value=Response(False)):
                     self.mock_update_service(provider_details_json)
+
+    def service_update(self, service_updates):
+        providers_details = {}
+        providers_details['Akamai'] = provider_details.ProviderDetail(
+            provider_service_id=12345,
+            access_urls='cdn234.altcdn.com',
+            status = 'unknown')
+
+        self.sc.storage_controller.get_provider_details.return_value = (
+            providers_details
+        )
+
+        service_obj = service.load_from_json(self.service_json)
+        service_obj.status = u'deployed'
+        self.sc.storage_controller.get_service.return_value = service_obj
+
+        cert_info = ssl_certificate.SSLCertificate("cdn",
+                                       "",
+                                       "sni",
+                                       "",
+                                       {})
+        self.sc.ssl_certificate_storage.get_certs_by_domain.return_value = cert_info
+
+        self.sc.flavor_controller.get.return_value = flavor.Flavor(
+            "cdn",
+            [flavor.Provider("akamai", "www.akamai.com")]
+        )
+
+        self.sc.update_service(
+            self.project_id,
+            self.service_id,
+            self.auth_token,
+            service_updates
+        )
+
+    def test_update_add_https_domains(self):
+
+        https_domains = ['cool1.domain.com', 'cool2.domain.com']
+        service_updates = json.dumps([
+            {
+                "op": "add",
+                "path":"/domains/-",
+                "value":{"domain":https_domains[0],"protocol":"https","certificate":"sni"}
+            },
+            {
+                "op": "add",
+                "path": "/domains/-",
+                "value": {"domain": https_domains[1], "protocol": "https", "certificate": "sni"}
+            }
+        ])
+        self.service_update(service_updates)
+
+        # Test that correct 'update_service' flow is called
+        task_called = self.sc.distributed_task_controller.submit_task.call_args
+        taskflow_name = task_called[0][0]
+        self.assertEqual(taskflow_name.__name__, 'update_service')
+
+        # Test the `cert_list_json` has all the domains in it
+        cert_list = json.loads(task_called[1]['cert_list_json'])
+        self.assertEqual(len(cert_list), len(https_domains))
+        for cert in cert_list:
+            self.assertIn(cert['domain_name'], https_domains)
+
+
+        # Now Test all the arguments passed to the 'create_service' Flow
+        self.sc.distributed_task_controller.submit_task.assert_called_with(
+            mock.ANY,
+            project_id=self.project_id,
+            cert_list_json=mock.ANY,
+            time_seconds=mock.ANY,
+            service_id=mock.ANY,
+            context_dict=mock.ANY,
+            auth_token=mock.ANY,
+            service_old=mock.ANY,
+            service_obj=mock.ANY,
+            providers_list_json='["akamai"]',
+        )
+
+    def test_update_add_http_domains(self):
+
+        http_domains = ['cool1.domain.com', 'cool2.domain.com']
+        service_updates = json.dumps([
+            {
+                "op": "add",
+                "path":"/domains/-",
+                "value":{"domain":http_domains[0],"protocol":"http"}
+            },
+            {
+                "op": "add",
+                "path": "/domains/-",
+                "value": {"domain": http_domains[1], "protocol": "http"}
+            }
+        ])
+        self.service_update(service_updates)
+
+        # Test that correct 'update_service' flow is called
+        task_called = self.sc.distributed_task_controller.submit_task.call_args
+        taskflow_name = task_called[0][0]
+        self.assertEqual(taskflow_name.__name__, 'update_service')
+
+        # Test the `cert_list_json` Dont have the HTTP domains in it
+        # The cert_list will have None for each HTTP domain
+        cert_list = json.loads(task_called[1]['cert_list_json'])
+        self.assertEqual(len(cert_list), len(http_domains))
+        for cert in cert_list:
+            self.assertIsNone(cert)
+
+
+        # Now Test all the arguments passed to the 'create_service' Flow
+        self.sc.distributed_task_controller.submit_task.assert_called_with(
+            mock.ANY,
+            project_id=self.project_id,
+            cert_list_json=mock.ANY,
+            time_seconds=mock.ANY,
+            service_id=mock.ANY,
+            context_dict=mock.ANY,
+            auth_token=mock.ANY,
+            service_old=mock.ANY,
+            service_obj=mock.ANY,
+            providers_list_json='["akamai"]',
+        )
+
+    def test_update_upgrade_http_domains(self):
+
+        upgrade_domains = ['www.mywebsite.com']
+        service_updates = json.dumps([
+            {
+                "op": "replace",
+                "path":"/domains/0",
+                "value":{"domain":upgrade_domains[0],"protocol":"https", "certificate":"sni"}
+            }
+        ])
+        self.service_update(service_updates)
+
+        # Test that correct 'update_service' flow is called
+        task_called = self.sc.distributed_task_controller.submit_task.call_args
+        taskflow_name = task_called[0][0]
+        self.assertEqual(taskflow_name.__name__, 'update_service')
+
+        # Since this is Domain upgrade, there should not be any
+        # domains present in the `cert_list_json`
+        cert_list = json.loads(task_called[1]['cert_list_json'])
+        self.assertEqual(len(cert_list), 0)
+
+        # Now Test all the arguments passed to the 'create_service' Flow
+        self.sc.distributed_task_controller.submit_task.assert_called_with(
+            mock.ANY,
+            project_id=self.project_id,
+            cert_list_json='[]',
+            time_seconds=mock.ANY,
+            service_id=mock.ANY,
+            context_dict=mock.ANY,
+            auth_token=mock.ANY,
+            service_old=mock.ANY,
+            service_obj=mock.ANY,
+            providers_list_json='["akamai"]',
+        )
 
     def test_update(self):
         provider_details_dict = {

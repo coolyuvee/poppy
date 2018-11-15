@@ -1,0 +1,69 @@
+[
+  [
+    {
+      "domains": [
+        {
+          "domain": "www.coolsite.com",
+          "protocol": "https",
+          "certificate": "sni"
+        }
+      ],
+      "origins": [
+        {
+          "origin": "mywebsite.com",
+          "port": 80
+        }
+      ],
+      "flavor_id": "cdn"
+    }
+  ],
+
+  [
+    {
+      "domains": [
+        {
+          "domain": "www.testdomain1.com",
+          "protocol": "https",
+          "certificate": "sni"
+        },
+        {
+          "domain": "www.testdomain2.com",
+          "protocol": "http"
+        }
+      ],
+      "origins": [
+        {
+          "origin": "mywebsite.com",
+          "port": 80
+        }
+      ],
+      "flavor_id": "cdn"
+    }
+  ],
+
+  [
+    {
+      "domains": [
+        {
+          "domain": "www.foggyhttp1.com",
+          "protocol": "http"
+        },
+        {
+          "domain": "www.foggyhttp2.com",
+          "protocol": "http"
+        },
+         {
+          "domain": "www.foggyhttp3.com",
+          "protocol": "http"
+        }
+      ],
+      "origins": [
+        {
+          "origin": "mywebsite.com",
+          "port": 80
+        }
+      ],
+      "flavor_id": "cdn"
+    }
+  ]
+]

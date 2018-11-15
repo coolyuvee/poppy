@@ -287,7 +287,7 @@ class ServicesController(base.ServicesBase):
 
         return shared_ssl_domain_name
 
-    def create(self, responders):
+    def create(self, responders, cert_domains=None):
         """Create CNAME record for a service.
 
         :param responders: responders from providers
@@ -309,31 +309,50 @@ class ServicesController(base.ServicesBase):
                     return self.responder.failed(providers, error_dict)
 
         # gather the provider urls and cname them
-        links = {}
+        dns_links = []
         for responder in responders:
             for provider_name in responder:
+                if not responder[provider_name]['links']:
+                    # Provider doesn't have links,
+                    # so we're generating one and will replace the
+                    # temporary domain when cps cert available
+                    customer_domains = responder[provider_name]['domains_certificate_status'].keys()
+                    for customer_domain in customer_domains:
+                        for cert_domain in cert_domains:
+                            for domain, cps_cert in cert_domain.items():
+                                if customer_domain == domain:
+                                    if cps_cert:
+                                        if not cps_cert.endswith(self._driver.sni_domain_suffix):
+                                            cps_cert += '.' + self._driver.sni_domain_suffix
+                                    responder[provider_name]['links'].append({
+                                        "href": cps_cert or self._driver.temp_cname_domain,
+                                        "rel": 'access_url',
+                                        "domain": customer_domain
+                                    })
+
                 for link in responder[provider_name]['links']:
                     if link['rel'] == 'access_url':
                         # We need to distinguish shared ssl domains in
                         # which case the we will use different shard prefix and
                         # and shard number
+                        links = {}
                         links[(
                             link['domain'],
                             link.get('certificate', None),
-                            None  # new link no pref operator url
+                            None  # new link; so no previous operator url
                         )] = link['href']
 
-        # create CNAME records
-        try:
-            dns_links = self._create_cname_records(links)
-        except Exception as e:
-            msg = 'Rackspace DNS Exception: {0}'.format(e)
-            error = {
-                'error_msg': msg,
-                'error_class': e.__class__
-            }
-            LOG.error(msg)
-            return self.responder.failed(providers, error)
+                    try:
+                        dns_link = self._create_cname_records(links)
+                        dns_links.append(dns_link)
+                    except Exception as e:
+                        msg = 'Rackspace DNS Exception: {0}'.format(e)
+                        error = {
+                            'error_msg': msg,
+                            'error_class': e.__class__
+                        }
+                        LOG.error(msg)
+                        return self.responder.failed(providers, error)
 
         # gather the CNAMED links
         dns_details = {}
@@ -342,25 +361,27 @@ class ServicesController(base.ServicesBase):
                 access_urls = []
                 for link in responder[provider_name]['links']:
                     if link['rel'] == 'access_url':
-                        access_url = {
-                            'domain': link['domain'],
-                            'provider_url': dns_links[(
-                                link['domain'],
-                                link.get('certificate', None),
-                                None
-                            )]['provider_url'],
-                            'operator_url': dns_links[(
-                                link['domain'],
-                                link.get('certificate', None),
-                                None
-                            )]['operator_url']}
-                        # Need to indicate if this access_url is a shared ssl
-                        # access url, since its has different shard_prefix and
-                        # num_shard
-                        if link.get('certificate', None) == 'shared':
-                            access_url['shared_ssl_flag'] = True
+                        for dns_link in dns_links:
+                            if link['domain'] in dns_link.keys()[0]:
+                                access_url = {
+                                    'domain': link['domain'],
+                                    'provider_url': dns_link[(
+                                        link['domain'],
+                                        link.get('certificate', None),
+                                        None
+                                    )]['provider_url'],
+                                    'operator_url': dns_link[(
+                                        link['domain'],
+                                        link.get('certificate', None),
+                                        None
+                                    )]['operator_url']}
+                                # Need to indicate if this access_url is a shared ssl
+                                # access url, since its has different shard_prefix and
+                                # num_shard
+                                if link.get('certificate', None) == 'shared':
+                                    access_url['shared_ssl_flag'] = True
 
-                        access_urls.append(access_url)
+                                access_urls.append(access_url)
                 dns_details[provider_name] = {'access_urls': access_urls}
         return self.responder.created(dns_details)
 
@@ -431,12 +452,13 @@ class ServicesController(base.ServicesBase):
                 providers.append(provider)
 
         # gather the provider links for the added domains
-        links = {}
+        dns_links = []
         for responder in responders:
             for provider_name in responder:
                 for link in responder[provider_name]['links']:
                     domain_added = (link['rel'] == 'access_url' and
                                     link['domain'] in added_domains)
+                    links = {}
                     if domain_added:
                         links[(
                             link['domain'],
@@ -444,18 +466,19 @@ class ServicesController(base.ServicesBase):
                             link.get('old_operator_url', None)
                         )] = link['href']
 
-        # create CNAME records for added domains
-        try:
-            dns_links = self._create_cname_records(links)
-        except Exception as e:
-            error_msg = 'Rackspace DNS Exception: {0}'.format(e)
-            error_class = e.__class__
-            error = {
-                'error_msg': error_msg,
-                'error_class': error_class
-            }
-            LOG.error(error_msg)
-            return self.responder.failed(providers, error)
+                        # create CNAME records for added domains
+                        try:
+                            dns_link = self._create_cname_records(links)
+                            dns_links.append(dns_link)
+                        except Exception as e:
+                            error_msg = 'Rackspace DNS Exception: {0}'.format(e)
+                            error_class = e.__class__
+                            error = {
+                                'error_msg': error_msg,
+                                'error_class': error_class
+                            }
+                            LOG.error(error_msg)
+                            return self.responder.failed(providers, error)
 
         # gather the CNAMED links for added domains
         for responder in responders:
@@ -463,25 +486,27 @@ class ServicesController(base.ServicesBase):
                 access_urls = []
                 for link in responder[provider_name]['links']:
                     if link['domain'] in added_domains:
-                        access_url = {
-                            'domain': link['domain'],
-                            'provider_url':
-                                dns_links[(link['domain'],
-                                           link.get('certificate', None),
-                                           link.get('old_operator_url', None)
-                                           )]['provider_url'],
-                            'operator_url':
-                                dns_links[(link['domain'],
-                                           link.get('certificate', None),
-                                           link.get('old_operator_url', None)
-                                           )]['operator_url']}
-                        # Need to indicate if this access_url is a shared ssl
-                        # access url, since its has different shard_prefix and
-                        # num_shard
-                        if link.get('certificate', None) == 'shared':
-                            access_url['shared_ssl_flag'] = True
+                        for dns_link in dns_links:
+                            if link['domain'] in dns_link.keys()[0]:
+                                access_url = {
+                                    'domain': link['domain'],
+                                    'provider_url':
+                                        dns_link[(link['domain'],
+                                                  link.get('certificate', None),
+                                                  link.get('old_operator_url', None)
+                                                  )]['provider_url'],
+                                    'operator_url':
+                                        dns_link[(link['domain'],
+                                                  link.get('certificate', None),
+                                                  link.get('old_operator_url', None)
+                                                  )]['operator_url']}
+                                # Need to indicate if this access_url is a shared ssl
+                                # access url, since its has different shard_prefix and
+                                # num_shard
+                                if link.get('certificate', None) == 'shared':
+                                    access_url['shared_ssl_flag'] = True
 
-                        access_urls.append(access_url)
+                                access_urls.append(access_url)
                 dns_details[provider_name] = {'access_urls': access_urls}
         return dns_details
 
@@ -541,7 +566,25 @@ class ServicesController(base.ServicesBase):
 
         return dns_details
 
-    def update(self, service_old, service_updates, responders):
+    def _is_domain_exists_in_links(self, links, domain):
+        for link in links:
+            if link['domain'] == domain:
+                return True
+        return False
+
+    def get_provider_cert_for_domain(self, cert_domains, domain_name):
+        for cert_domain in cert_domains:
+            if not cert_domain:
+                return None
+            if cert_domain.keys()[0] == domain_name:
+                provider_cert = cert_domain.values()[0]
+                if not provider_cert.endswith(self._driver.sni_domain_suffix):
+                    provider_cert += '.' + self._driver.sni_domain_suffix
+                return provider_cert
+
+        return None
+
+    def update(self, service_old, service_updates, responders, cert_domains=None):
         """Update CNAME records for a service.
 
         :param service_old: previous service state
@@ -571,6 +614,35 @@ class ServicesController(base.ServicesBase):
                 if 'error' in responder[provider_name]:
                     return old_access_urls_map
 
+        # Populate `links` if not already present.
+        # For newly added domains: `links` will be empty.
+        # For upgraded domains, all the fields will be available in `links`.
+        # But the field `href` will be `None` when there was no provider
+        # cert available. Just Update that field.
+        for responder in responders:
+            for provider_name in responder:
+                customer_domains = responder[provider_name]['domains_certificate_status'].keys()
+                links = responder[provider_name]['links']
+
+                # For newly added domains
+                for customer_domain in customer_domains:
+                    if not self._is_domain_exists_in_links(links, customer_domain):
+                        cname = self.get_provider_cert_for_domain(cert_domains, customer_domain)
+                        responder[provider_name]['links'].append({
+                            "href": cname or self._driver.temp_cname_domain,
+                            "rel": 'access_url',
+                            "domain": customer_domain
+                        })
+
+                # For upgraded domains, when there was not any available cps
+                # cert, the `href` will be null. Update it with temporary domain.
+                for link in links:
+                    if not link['href']:
+                        link['href'] = self._driver.temp_cname_domain
+
+                    if not link['href'] == self._driver.temp_cname_domain:
+                        if not link['href'].endswith(self._driver.sni_domain_suffix):
+                            link['href'] += '.' + self._driver.sni_domain_suffix
         # get new_domains
         new_domains = set()
         for responder in responders:

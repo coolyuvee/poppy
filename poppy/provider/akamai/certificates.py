@@ -62,7 +62,7 @@ class CertificateController(base.CertificateBase):
         self.sps_api_base_url = self.driver.akamai_sps_api_base_url
         self.cps_api_base_url = self.driver.akamai_cps_api_base_url
 
-    def create_certificate(self, cert_obj, enqueue=True, https_upgrade=False):
+    def create_certificate(self, cert_obj, enqueue=False, https_upgrade=False):
         if cert_obj.cert_type == 'san':
             try:
                 found, found_cert = (

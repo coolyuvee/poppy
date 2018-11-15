@@ -20,6 +20,7 @@ from taskflow import retry
 
 from poppy.distributed_task.taskflow.task import common
 from poppy.distributed_task.taskflow.task import update_service_tasks
+from poppy.distributed_task.taskflow.task import create_ssl_certificate_tasks
 
 LOG = log.getLogger(__name__)
 
@@ -34,6 +35,10 @@ def update_service():
             common.ContextUpdateTask()),
         linear_flow.Flow('Update Provider Services').add(
             update_service_tasks.UpdateProviderServicesTask()),
+        linear_flow.Flow("Provision poppy ssl certificate",
+                         retry=retry.Times(5)).add(
+            create_ssl_certificate_tasks.CreateProviderSSLCertificateTask(),
+            create_ssl_certificate_tasks.UpdateCertInfoTask()),
         linear_flow.Flow('Update Service DNS Mapping flow',
                          retry=retry.ParameterizedForEach(
                              rebind=['time_seconds'],

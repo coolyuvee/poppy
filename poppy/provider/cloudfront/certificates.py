@@ -21,5 +21,5 @@ class CertificateController(base.CertificateBase):
     def __init__(self, driver):
         super(CertificateController, self).__init__(driver)
 
-    def create_certificate(self, cert_obj, enqueue=True):
+    def create_certificate(self, cert_obj, enqueue=False):
         return NotImplemented

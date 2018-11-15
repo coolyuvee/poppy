@@ -31,7 +31,7 @@ class CertificatesControllerBase(controller.ProviderControllerBase):
         self.responder = responder.Responder(driver.provider_name)
 
     @abc.abstractmethod
-    def create_certificate(self, cert_obj, enqueue=True):
+    def create_certificate(self, cert_obj, enqueue=False):
         """Create a certificate.
 
         :param cert_obj

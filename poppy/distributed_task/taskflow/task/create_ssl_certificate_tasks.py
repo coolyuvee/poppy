@@ -29,39 +29,48 @@ conf(project='poppy', prog='poppy', args=[])
 
 
 class CreateProviderSSLCertificateTask(task.Task):
-    default_provides = "responders"
+    default_provides = ("ssl_responders", "cert_domains")
 
-    def execute(self, providers_list_json, cert_obj_json, enqueue=True,
+    def execute(self, providers_list_json, cert_list_json, enqueue=False,
                 https_upgrade=False):
         service_controller = memoized_controllers.task_controllers('poppy')
-
-        # call provider create_ssl_certificate function
         providers_list = json.loads(providers_list_json)
-        cert_obj = ssl_certificate.load_from_json(json.loads(cert_obj_json))
 
-        responders = []
+        cert_obj_list = json.loads(cert_list_json)
+        ssl_responders = []
+        cert_domains = []
+
         # try to create all certificates from each provider
         for provider in providers_list:
-            LOG.info('Starting to create ssl certificate: {0}'
-                     'from {1}'.format(cert_obj.to_dict(), provider))
-            responder = service_controller.provider_wrapper.create_certificate(
-                service_controller._driver.providers[provider],
-                cert_obj,
-                enqueue,
-                https_upgrade
-            )
-            responders.append(responder)
+            for cert_obj in cert_obj_list:
+                if not cert_obj:
+                    # This means the domain was HTTP
+                    # No Need to create provider certificate
+                    ssl_responders.append([])
+                    cert_domains.append(None)
+                else:
+                    cert_obj = ssl_certificate.load_from_json(cert_obj)
+                    LOG.info('Starting to create ssl certificate: {0}'
+                             'from {1}'.format(cert_obj.to_dict(), provider))
+                    responder = service_controller.provider_wrapper.create_certificate(
+                        service_controller._driver.providers[provider],
+                        cert_obj,
+                        enqueue,
+                        https_upgrade
+                    )
+                    ssl_responders.append({cert_obj.domain_name:responder})
+                    cert_domains.append({cert_obj.domain_name:responder['Akamai']['cert_domain']})
 
-        return responders
+        return ssl_responders, cert_domains
 
 
 class SendNotificationTask(task.Task):
 
-    def execute(self, project_id, responders, upgrade=False):
+    def execute(self, project_id, ssl_responders, upgrade=False):
         service_controller = memoized_controllers.task_controllers('poppy')
 
         notification_content = ""
-        for responder in responders:
+        for responder in ssl_responders:
             for provider in responder:
                 notification_content += (
                     "Project ID: %s, Provider: %s, Detail: %s" %
@@ -85,23 +94,31 @@ class SendNotificationTask(task.Task):
 
 class UpdateCertInfoTask(task.Task):
 
-    def execute(self, project_id, cert_obj_json, responders):
+    def execute(self, project_id, cert_list_json, ssl_responders):
+
         service_controller, self.ssl_certificate_manager = \
             memoized_controllers.task_controllers('poppy', 'ssl_certificate')
         self.storage_controller = self.ssl_certificate_manager.storage
 
-        cert_details = {}
-        for responder in responders:
-            for provider in responder:
-                cert_details[provider] = json.dumps(responder[provider])
+        cert_obj_list = json.loads(cert_list_json)
+        for cert_obj in cert_obj_list:
+            if cert_obj:
+                cert_obj = ssl_certificate.load_from_json(cert_obj)
+                for responder in ssl_responders:
+                    for k,v in responder.items():
+                        if cert_obj.domain_name == k:
+                            provider_details = v
+                            for provider in provider_details:
+                                cert_details = {}
+                                cert_details[provider] = json.dumps(provider_details[provider])
+                                self.storage_controller.update_certificate(
+                                    cert_obj.domain_name,
+                                    cert_obj.cert_type,
+                                    cert_obj.flavor_id,
+                                    cert_details
+                                )
+                            break
 
-        cert_obj = ssl_certificate.load_from_json(json.loads(cert_obj_json))
-        self.storage_controller.update_certificate(
-            cert_obj.domain_name,
-            cert_obj.cert_type,
-            cert_obj.flavor_id,
-            cert_details
-        )
 
         return
 
@@ -109,8 +126,9 @@ class UpdateCertInfoTask(task.Task):
 class CreateStorageSSLCertificateTask(task.Task):
     """This task is meant to be used in san rerun flow."""
 
-    def execute(self, project_id, cert_obj_json):
-        cert_obj = ssl_certificate.load_from_json(json.loads(cert_obj_json))
+    def execute(self, project_id, cert_list_json):
+        cert_obj_list = json.loads(cert_list_json)
+        cert_obj = ssl_certificate.load_from_json(cert_obj_list[0])
 
         service_controller, self.ssl_certificate_manager = \
             memoized_controllers.task_controllers('poppy', 'ssl_certificate')

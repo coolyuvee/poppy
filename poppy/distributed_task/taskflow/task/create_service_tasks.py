@@ -105,11 +105,11 @@ class CreateProviderServicesTask(task.Task):
 class CreateServiceDNSMappingTask(task.Task):
     default_provides = "dns_responder"
 
-    def execute(self, responders, retry_sleep_time, project_id, service_id):
+    def execute(self, responders, retry_sleep_time, project_id, service_id, cert_domains=None):
         service_controller, dns = \
             memoized_controllers.task_controllers('poppy', 'dns')
 
-        dns_responder = dns.create(responders)
+        dns_responder = dns.create(responders, cert_domains=cert_domains)
         for provider_name in dns_responder:
             if 'error' in dns_responder[provider_name]:
                 msg = 'Create DNS for {0} ' \
@@ -136,7 +136,6 @@ class CreateServiceDNSMappingTask(task.Task):
 
     def revert(self, responders, retry_sleep_time,
                project_id, service_id, **kwargs):
-
         if self.name in kwargs['flow_failures'].keys():
             retries = conf[DNS_GROUP].retries
             current_progress = (1.0 / retries)

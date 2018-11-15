@@ -74,7 +74,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         kwargs = {
             'providers_list_json': json.dumps(providers),
             'project_id': project_id,
-            'cert_obj_json': json.dumps(cert_obj.to_dict()),
+            'cert_list_json': json.dumps([cert_obj.to_dict()]),
             'context_dict': context_utils.get_current().to_dict()
         }
         if https_upgrade is True:
@@ -193,6 +193,7 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
 
             # double check in POST. This check should really be first done in
             # PUT
+            domain_service_map = {}
             for r in retry_list:
                 err_state = False
                 service_obj = self.service_storage\
@@ -220,7 +221,11 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
                             service_obj.operator_status
                         )
                     )
+
                 try:
+                    if service_obj:
+                        domain_service_map[r['domain_name']] = service_obj.service_id
+
                     cert_for_domain = self.storage.get_certs_by_domain(
                         r['domain_name'])
 
@@ -283,16 +288,19 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
                         raise e
 
                     providers = [p.provider_id for p in flavor.providers]
+                    cert_obj_list = [cert_obj.to_dict()]
+
                     kwargs = {
                         'project_id': cert_obj.project_id,
                         'domain_name': cert_obj.domain_name,
                         'cert_type': cert_obj.cert_type,
                         'providers_list_json': json.dumps(providers),
-                        'cert_obj_json': json.dumps(cert_obj.to_dict()),
+                        'cert_list_json': json.dumps(cert_obj_list),
                         'enqueue': False,
                         'context_dict': context_utils.RequestContext(
                             tenant=cert_obj.project_id
-                        ).to_dict()
+                        ).to_dict(),
+                        'service_id':domain_service_map.get(cert_obj.domain_name, None)
                     }
                     self.distributed_task_controller.submit_task(
                         recreate_ssl_certificate.recreate_ssl_certificate,
