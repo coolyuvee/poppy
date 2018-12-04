@@ -13,6 +13,38 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Pecan router to map service related urls.
+
+Each class in this module maps to different urls.
+
+ - Purge service [:class:`ServiceAssetsController` ]
+ - Retrieve analytical metrics for domain [:class:`ServicesAnalyticsController` ]
+ - GET/Create/Delete/Update service [:class:`ServicesController` ]
+
+Mappings:-
+
+Each HTTP method is mapped to Pecan's method as shown below.
+
+Pecan Method     HttpMethod/URL
+-------------   ------------------
+get_one         -> GET /services/<service-id>
+get_all         -> GET /services/
+get             -> GET /services/ or GET /services/<service-id>
+post            -> POST /services/
+put             -> PUT /services/<service-id>
+delete          -> DELETE /services/<service-id>
+
+Example:-
+
+  - The URL ``{{host}}/v1.0/services/ with HTTP POST`` will be received by
+    :py:func:`ServicesController.post``
+  - The URL ``{{host}}/v1.0/services/ with HTTP POST`` will be received by
+    :py:func:`ServicesController.get_all``
+
+For more details on how the top level URL mapping is done, refer to
+ :py:mod:`poppy/poppy/transport/pecan/driver.py`
+"""
+
 import ast
 import json
 import uuid
@@ -148,6 +180,23 @@ class ServicesAnalyticsController(base.Controller, hooks.HookController):
 
 
 class ServicesController(base.Controller, hooks.HookController):
+    """Handles typical CRUD operations on Services.
+
+    Enables Context Hook and Errors Hook.
+    `Context Hook` checks that `X-Project-ID` and `X-Auth-Token`
+    are present in the request payload and constructs `base_url`.
+    `Errors Hook` handles any errors during the request.
+
+    Apart from Hooks, each CRUD operation will validate the
+    passed in request parameters.
+
+    After doing the base level validations on the request
+    payload, calls will be delegated to  Manager layer to
+    process the request.
+
+    When Manager layer returns an output/ or any Exception
+    raised, It serializes the responses and returns to user.
+    """
 
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
@@ -167,10 +216,18 @@ class ServicesController(base.Controller, hooks.HookController):
 
     @pecan.expose('json')
     def get_all(self):
-        """
-        Get all the services available
-        :return: Dict of links and services
-        :rtype: dict
+        """Get all the services in Poppy.
+
+        There is a limit on number of services that can
+        be fetched at a time. This limit can be configured
+        through ``poppy.conf`` by setting an integer value
+        for ``max_services_per_page``.
+
+        Example return:
+
+
+
+        :return:
         """
         marker = pecan.request.GET.get('marker', None)
         limit = pecan.request.GET.get('limit', 10)
