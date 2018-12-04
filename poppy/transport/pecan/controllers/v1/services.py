@@ -41,6 +41,21 @@ Example:-
   - The URL ``{{host}}/v1.0/services/ with HTTP POST`` will be received by
     :py:func:`ServicesController.get_all``
 
+Each class in the module have Enabled Context Hook and Errors Hook.
+`Context Hook` checks that `X-Project-ID` and `X-Auth-Token`
+are present in the request payload and constructs `base_url`.
+`Errors Hook` handles any errors during the request.
+
+``validate`` decorators are injected into each method of the class
+to validate the payload and other dependencies. If any of the
+validation fails, operation will be aborted and ``Errors Hook``
+will be responsible for sending error response to the user.
+
+After doing the base level validations on the request
+payload, calls will be delegated to  Manager layer to
+process the request. The Default Manager layer has
+various controllers to handle these requests.
+
 For more details on how the top level URL mapping is done, refer to
  :py:mod:`poppy/poppy/transport/pecan/driver.py`
 """
@@ -77,6 +92,7 @@ LIMITS_GROUP = 'drivers:transport:limits'
 
 
 class ServiceAssetsController(base.Controller, hooks.HookController):
+    """Controller to purge the contents of service"""
 
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
@@ -87,12 +103,27 @@ class ServiceAssetsController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def delete(self, service_id):
-        """
+        """Purge contents of a service.
 
-        Purge a service by id
-        :type service_id: str
-        :param service_id: Id of the service to delete
-        :return: Pecan's response with 202 status
+        Purge the content when it is in the provider
+        network. Based on the ``purge_url`` in the request,
+        content will be purged.
+
+        For example: When the ``purge_url`` is set to
+        ``/images/*``, all the images present in the
+        the path will be purged.
+
+        Note that if the ``purge_url`` is None, all the
+        contents of the service will be purged.
+
+        The default manager will invoke ``purge taskflow``
+        to do this operation.
+
+        :param unicode service_id: ID of the service
+        :return: Pecan's 200 response if the ``purge taskflow``
+          is successfully invoked. 404 if the service not
+          found. 400 response if the request payload is
+          incompatible.
         :rtype: pecan.Response
         """
         purge_url = pecan.request.GET.get('url', '/*')
@@ -136,6 +167,9 @@ class ServiceAssetsController(base.Controller, hooks.HookController):
 
 
 class ServicesAnalyticsController(base.Controller, hooks.HookController):
+    """Controller to process and return Metrics for a given
+    service.
+    """
 
     __hooks__ = [poppy_hooks.Context(), poppy_hooks.Error()]
 
@@ -150,12 +184,26 @@ class ServicesAnalyticsController(base.Controller, hooks.HookController):
             stoplight_helpers.pecan_getter)
     )
     def get(self, service_id):
-        """
+        """Get Metrics for a given service ID.
 
-        Get metrics by domain of this service id
-        :type service_id: str
-        :param service_id: Id of the service to retrieve the metrics by domain
-        :return: Pecan response object with http status code 200 or 500 or 404 or 400
+        The below keys are expected in the payload.
+         - metricType
+         - startTime
+         - endTime
+         - metrics_controller
+
+        Example return:
+
+            Pecan will serialize the below dict and sends along
+            with 200 response.
+
+            ``{'provider': '', 'flavor':'', 'domain':'', 'metricType': {}}``
+
+        :param unicode service_id: ID of the service
+        :return: Pecan's 200 response if successfully retrieved
+          analytics for the service. 404 response if the service
+          was not found or Provider details not found. 500 response
+          for general server side exceptions.
         :rtype: pecan.Response
         """
         call_args = getattr(pecan.request.context,
@@ -182,18 +230,6 @@ class ServicesAnalyticsController(base.Controller, hooks.HookController):
 class ServicesController(base.Controller, hooks.HookController):
     """Handles typical CRUD operations on Services.
 
-    Enables Context Hook and Errors Hook.
-    `Context Hook` checks that `X-Project-ID` and `X-Auth-Token`
-    are present in the request payload and constructs `base_url`.
-    `Errors Hook` handles any errors during the request.
-
-    Apart from Hooks, each CRUD operation will validate the
-    passed in request parameters.
-
-    After doing the base level validations on the request
-    payload, calls will be delegated to  Manager layer to
-    process the request.
-
     When Manager layer returns an output/ or any Exception
     raised, It serializes the responses and returns to user.
     """
@@ -218,16 +254,21 @@ class ServicesController(base.Controller, hooks.HookController):
     def get_all(self):
         """Get all the services in Poppy.
 
+        Example URL to create service:
+         -``{{host}}/v1.0/services/`` with HTTP method as `GET`
+
         There is a limit on number of services that can
         be fetched at a time. This limit can be configured
         through ``poppy.conf`` by setting an integer value
         for ``max_services_per_page``.
 
-        Example return:
-
-
-
-        :return:
+        :return: Dictionary containing lists of links and
+          serialized Service objects
+        :rtype: dict
+        :raise ValueError: If the request `limit` value
+          is more than configured ``max_services_per_page``
+          Or If the request `marker` is not
+          a valid UUID
         """
         marker = pecan.request.GET.get('marker', None)
         limit = pecan.request.GET.get('limit', 10)
@@ -278,13 +319,18 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def get_one(self, service_id):
-        """
+        """Get a Service details by its ID.
 
-        Get a service by id
-        :type service_id: str
-        :param service_id: Id of the service to retrieve
-        :return: Service details
+        Example URL to get  service:
+         -``{{host}}/v1.0/services/<service-id>``
+           with HTTP method as `GET`
+
+        :param unicode service_id: Id of the service
+
+        :return: Service object serialized into OrderedDict
         :rtype: collections.OrderedDict
+        :raise ValueError: If there was not any service
+          for the given ID.
         """
         services_controller = self._driver.manager.services_controller
         try:
@@ -304,9 +350,66 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def post(self):
-        """
-        Create a new service
-        :return: Pecan response with status 202
+        """Create a new service.
+
+        Example URL to create service:
+         -``{{host}}/v1.0/services/`` with HTTP method as `POST`
+
+        An example payload for this POST request:
+
+        .. code-block:: python
+
+            {
+                "name": "ServiceName0001",
+                "domains":
+                [
+                    {
+                        "domain": "test.domain.com",
+                        "protocol": "http"
+                    }
+                ],
+                "origins":
+                [
+                    {
+                        "origin": "www.example.com",
+                        "port": 80,
+                        "ssl": false
+                    }
+                ],
+                "caching": [
+                    {
+                        "name": "default",
+                        "ttl": 3600
+                    }
+                ],
+              "flavor_id": "premium",
+              "restrictions": [
+                ]
+            }
+
+        The payload must have at least one domain and one origin.
+        The request to create a new service will be
+        delegated to Default Manager service controller
+        that does the below.
+
+         - A service dictionary gets created in Cassandra
+         - Async tasks to create DNS mappings
+         - Async tasks to create provider policies
+         - Based on `Enqueue` flag, request to create SSL
+           certificate will be enqueued in mod_san_queue or
+           a certificate will be created for HTTPS domains.
+           Enqueue flag is set to `True` by default.
+
+        Create service will be aborted if ..
+         - All the available shards are exhausted
+         - No flavor is created in Cassandra
+         - If the service name already exists
+         - Services count is exceeding the limit
+
+        In all the above cases, Pecan sends a 400 error.
+
+        :return: Pecan's 200 response if the service was
+          successfully created, 400 response otherwise.
         :rtype: pecan.Response
         """
         services_controller = self._driver.manager.services_controller
@@ -343,11 +446,20 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message)
     )
     def delete(self, service_id):
-        """
-        Delete a service by id
-        :type service_id: str
-        :param service_id: Id of the service to delete
-        :return: Pecan response with http status code 202 or 404
+        """Delete a service for a given service ID.
+
+        Example URL to create service:
+         -``{{host}}/v1.0/service/<service-id>``
+          with HTTP method as `DELETE`
+
+        Deleting service will trigger the below tasks
+         - Deleting service dictionary from Cassandra
+         - Deleting DNS mappings
+         - Deleting associated certificates for each domain in the service
+
+        :param unicode service_id: Id of the service to delete
+        :return: Pecan's 202 response if the delete operation was
+          successful. Else, Pecan's 400 response will be returned.
         :rtype: pecan.Response
         """
         services_controller = self._driver.manager.services_controller
@@ -372,12 +484,35 @@ class ServicesController(base.Controller, hooks.HookController):
             helpers.abort_with_message,
             stoplight_helpers.pecan_getter))
     def patch_one(self, service_id):
-        """
+        """Update service.
 
-        Update a service
-        :type service_id: str
-        :param service_id: Id of the service to update
-        :return: Pecan response with http status code 202 or 400 or 404
+        Example URL to create service:
+         -``{{host}}/v1.0/services/<service-id>``
+            with HTTP method as `PATCH`
+
+        For payload, refer to :meth:`post()`.
+
+        Updating service is two-step process. It filters out
+        the payload and detects newly added domains, deleted
+        old domains. For newly added domains, it follows the
+        :meth:`post()` workflow. For deleted domains it
+        follows :meth:`delete()` workflow. If the service
+        update involves anything other than domains (ex:
+        renaming the service etc..) it updated the service
+        dictionary in cassandra.
+
+        The update operation will be aborted if ..
+         - If any validations failed in request Payload
+         - No flavor detected in cassandra
+         - No service found
+         - Conflict names while renaming service
+         - If the service is in invalid states
+         - Exhausted shard domains
+
+        :param unicode service_id: ID of the service to update
+        :return: Pecan's 200 response if the service was updated
+         successfully. 404 response if the service was not found.
+         In other cases, 400 response will be returned.
         :rtype: pecan.Response
         """
         service_updates = json.loads(pecan.request.body.decode('utf-8'))
