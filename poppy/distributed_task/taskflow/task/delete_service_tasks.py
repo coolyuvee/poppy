@@ -51,6 +51,14 @@ class DeleteProviderServicesTask(task.Task):
     default_provides = "responders"
 
     def execute(self, provider_details, project_id):
+        """Create responder from provider details.
+
+        Initiated request to akamai to remove associated service.
+        :param unicode provider_details: details of the provider
+        :param unicode project_id: project_id os the user
+        :return: list of responder
+        :rtype: list[dict]
+        """
         service_controller = memoized_controllers.task_controllers('poppy')
         provider_details = json.loads(provider_details)
 
@@ -76,6 +84,18 @@ class DeleteServiceDNSMappingTask(task.Task):
 
     def execute(self, provider_details, retry_sleep_time,
                 responders, project_id, service_id):
+        """Deletes the mapping between dns service and provider url.
+
+        The result is assiciation of cname created at rackspace dns
+        which used by customer for their by vanity domain will be removed.
+        :param unicode provider_details: json of providers
+        :param int retry_sleep_time: sleep time
+        :param list[dict] responders: list of responder
+        :param unicode project_id: project id of the user
+        :param unicode service_id: uuid of the service
+        :return: dict of dns_responder
+        :rtype: dict
+        """
         service_controller, dns = \
             memoized_controllers.task_controllers('poppy', 'dns')
 
@@ -115,6 +135,19 @@ class DeleteServiceDNSMappingTask(task.Task):
 
     def revert(self, provider_details, retry_sleep_time,
                responders, project_id, service_id, **kwargs):
+        """If failed to delete association dns mapping
+        failed revert the reestablish dns mapping task.
+
+        CNAME created at rackspace dns which used by customer for
+        their by vanity domain failed to delete. Will reestablish
+        the dns mapping.
+
+        :param dict provider_details: dict of providers
+        :param int retry_sleep_time: sleep time
+        :param list[dict] responders: list of responder
+        :param unicode project_id: project id of the user
+        :param unicode service_id: uuid of the service
+        """
         if self.name in kwargs['flow_failures'].keys():
             retries = conf[DNS_GROUP].retries
             current_progress = (1.0 / retries)
@@ -167,6 +200,14 @@ class GatherProviderDetailsTask(task.Task):
     default_provides = "provider_details_dict"
 
     def execute(self, responders, dns_responder, provider_details):
+        """Gathers the status of service, dns.
+
+        :param list[dict] responders: list of responder
+        :param dict dns_responder: dict of dns_responder
+        :param unicode provider_details: json of providers
+        :return: dict of provider details
+        :rtype: dict
+        """
         provider_details = json.loads(provider_details)
         for provider in provider_details:
             provider_details[provider] = (
@@ -204,6 +245,13 @@ class GatherProviderDetailsTask(task.Task):
 class DeleteStorageServiceTask(task.Task):
 
     def execute(self, project_id, service_id):
+        """Delete service details from cassandra.
+
+        Delete the service details from cassandra and remove all entries
+        about the service
+        :param unicode project_id: project id of the user
+        :param unicode service_id: uuid of service
+        """
         service_controller, self.storage_controller = \
             memoized_controllers.task_controllers('poppy', 'storage')
         self.storage_controller.delete_service(project_id, service_id)
@@ -222,6 +270,13 @@ class DeleteCertificatesForService(task.Task):
     """Delete SAN and SNI certificates for a service."""
 
     def execute(self, project_id, service_id):
+        """Submit the task to delete the certificate.
+
+        Delete the details of certificate from cassandra and remove
+        the entry of the certificate.
+        :param unicode project_id: project id of the user
+        :param unicode service_id: uuid of service
+        """
         service_controller, self.storage_controller = \
             memoized_controllers.task_controllers('poppy', 'storage')
 

@@ -237,6 +237,19 @@ class UpdateProviderDetailErrorTask(task.Task):
     default_provides = "changed_provider_details_dict"
 
     def execute(self, responders, service_id, provider_details, hard):
+        """Update the provider details of service.
+
+        Updates the provider details for a service
+        and includes any error information.
+
+        :param list[dict] responders: list of responder
+        :param unicode service_id: uuid of service
+        :param unicode provider_details: json object of provider
+        :param unicode hard: parameter passed to force delete
+
+        :return: dict of changed_provider_details_dict
+        :rtype: dict
+        """
         provider_details = json.loads(provider_details)
         for provider in provider_details:
             # NOTE(tonytan4ever): if the purge_url is None, it means to purge

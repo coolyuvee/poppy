@@ -35,6 +35,17 @@ class PurgeProviderServicesTask(task.Task):
     default_provides = "responders"
 
     def execute(self, service_obj, hard, provider_details, purge_url):
+        """delete/abruptly remove details of service.
+
+       If purge url is not provided delete all the content, else
+       delete only the content of the purge url provided.
+       :param unicode service_obj: json of service dict
+       :param unicode hard: passed by user if wants to hard purge all content
+       :param unicode provider_details: json of the provider dict
+       :param unicode purge_url: url need to purge
+       :return: list of responder
+       :rtype: list[dict]
+       """
         service_controller = memoized_controllers.task_controllers('poppy')
         service_json = json.loads(service_obj)
         service_obj = service.load_from_json(service_json)

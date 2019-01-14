@@ -97,6 +97,12 @@ class SendNotificationTask(task.Task):
 class DeleteStorageSSLCertificateTask(task.Task):
 
     def execute(self, project_id, domain_name, cert_type):
+        """Delete certificate details from cassandra.
+
+        :param unicode project_id: project id of the user
+        :param unicode domain_name: domain name of the user
+        :param unicode cert_type: certificate type of the user
+        """
         service_controller, self.ssl_certificate_manager = \
             memoized_controllers.task_controllers('poppy', 'ssl_certificate')
         self.storage_controller = self.ssl_certificate_manager.storage

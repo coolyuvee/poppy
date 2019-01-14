@@ -106,6 +106,32 @@ class CreateServiceDNSMappingTask(task.Task):
     default_provides = "dns_responder"
 
     def execute(self, responders, retry_sleep_time, project_id, service_id):
+        """Creates the mapping between dns service and provider url.
+
+        The goal here is to get or create the (dns provider) domain that
+        a customer can then cname their vanity domain.
+        **dns-provider-domain <-> cdn-provider-domain**
+
+        Example of ``responders`` *(input parameter)*:
+        .. code-block:: python
+            [{'Akamai': {
+            'domains_certificate_status': {u'test.hsrax.com': 'create_in_progress'},
+            'id': '[{"protocol": "https", "certificate": "sni", "policy_name": "test.hsrax.com"}]',
+            'links': []}}]
+
+        Example return:
+
+        .. code-block:: python
+            {'Akamai': {'access_urls': []}}
+
+        :param list[dict] responders: list of responders (from DNS Providers)
+        :param int retry_sleep_time: The number of seconds between each retry attempt
+        :param unicode project_id: A project/tenant id
+        :param unicode service_id: A generated :py:func:`uuid.uuid4` that represents a service
+        :return: dict of dns_responder:  :py:meth:`poppy.dns.base.responder.Responder.created`
+         (also see: :py:meth:`poppy.dns.rackspace.services.ServicesController#create`)
+        :rtype: dict
+        """
         service_controller, dns = \
             memoized_controllers.task_controllers('poppy', 'dns')
 
@@ -136,6 +162,13 @@ class CreateServiceDNSMappingTask(task.Task):
 
     def revert(self, responders, retry_sleep_time,
                project_id, service_id, **kwargs):
+        """Reverts the create dns mapping task if failed.
+
+        :param list responders: list of responder
+        :param int retry_sleep_time: The number of seconds between each retry attempt
+        :param unicode project_id: A project/tenant id
+        :param unicode service_id: A generated :py:func:`uuid.uuid4` that represents a service
+        """
 
         if self.name in kwargs['flow_failures'].keys():
             retries = conf[DNS_GROUP].retries
@@ -210,6 +243,14 @@ class CreateLogDeliveryContainerTask(task.Task):
     default_provides = "log_responders"
 
     def execute(self, project_id, auth_token, service_id):
+        """If enabled, create an object storage container for logs.
+
+        :param unicode project_id: A project/tenant id
+        :param unicode auth_token: auth_token from keystone used for container access
+        :param unicode service_id: A generated :py:func:`uuid.uuid4` that represents a service
+        :return: Log responders: :py:meth:`~poppy.distributed_task.taskflow.task.common.create_log_delivery_container`
+        :rtype: list or list[dict]
+        """
         service_controller, self.storage_controller = \
             memoized_controllers.task_controllers('poppy', 'storage')
 
@@ -235,6 +276,7 @@ class CreateLogDeliveryContainerTask(task.Task):
         return log_responders
 
     def revert(self, *args, **kwargs):
+        """Close any Cassandra connections left open on the session."""
         try:
             if getattr(self, 'storage_controller') \
                     and self.storage_controller._driver.session:
@@ -248,6 +290,21 @@ class GatherProviderDetailsTask(task.Task):
     default_provides = "provider_details_dict"
 
     def execute(self, responders, dns_responder, log_responders):
+        """Gathers the status of create service, create dns and log delivery.
+
+         Example return:
+           .. code-block:: python
+               {'Akamai': OrderedDict(
+               [('id', '[{"protocol": "https", "certificate": "sni", "policy_name": "test.hsrax.com"}]'),
+                ('access_urls', []), ('status', 'deployed'), ('name', None),
+                ('domains_certificate_status', {u'test.hsrax.com': 'create_in_progress'}), ('error_info', None),
+                ('error_message', None), ('error_class', None)])}
+           :param list[dict] responders: List of results from :py:meth:`poppy.provider.base.responder.Responder.created`
+           :param dict dns_responder: DNS provider details (see: :py:meth:poppy.dns.base.responder.Responder.created`)
+           :param list[dict] log_responders: list of log_responder (see :term:`Responder`)
+           :return: Details from providers, dns, and log :term:`responders<Responder>` stored in a single dict
+           :rtype: dict[str, collections.OrderedDict]
+           """
         provider_details_dict = {}
         for responder in responders:
             for provider_name in responder:
