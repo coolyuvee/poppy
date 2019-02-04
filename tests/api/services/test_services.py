@@ -95,8 +95,8 @@ class TestCreateService(providers.TestProviderBase):
                                               in body['domains']
                                               if (
                                                   b_item['domain'] ==
-                                                  item['domain'])
-                                              or (b_item.get('certificate') ==
+                                                  item['domain']) or
+                                              (b_item.get('certificate') ==
                                                   'shared' and
                                                   item['domain'] ==
                                                   b_item['domain']

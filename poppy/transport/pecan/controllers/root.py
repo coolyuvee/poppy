@@ -36,9 +36,9 @@ class RootController(base.Controller):
         # Remove it from the URL if it's present
         # ['v1.0', 'services'] or ['v1', '123', 'services']
         if (
-            len(args) >= 2
-            and args[0] in self.paths
-            and re.match('^[0-9]+$', args[1])
+                len(args) >= 2 and
+                args[0] in self.paths and
+                re.match('^[0-9]+$', args[1])
         ):
             args.pop(1)
 

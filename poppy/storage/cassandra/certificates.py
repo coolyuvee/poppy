@@ -281,7 +281,7 @@ class CertificatesController(base.CertificatesController):
                                      "the domain {}".format(domain_name))
 
             return ssl_cert
-        except:
+        except Exception:
             raise ValueError("No matching certificates found for "
                              "the domain {}".format(domain_name))
 

@@ -115,7 +115,6 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
             domain_name=domain_name,
             project_id=project_id)
 
-
     def get_san_retry_list(self):
         if 'akamai' in self._driver.providers:
             akamai_driver = self._driver.providers['akamai'].obj
@@ -127,9 +126,9 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
         res = [json.loads(r) for r in res]
         return [
             {"domain_name": r['domain_name'],
-             "project_id":  r['project_id'],
-             "flavor_id":   r['flavor_id'],
-             "cert_type":   r['cert_type'],
+             "project_id": r['project_id'],
+             "flavor_id": r['flavor_id'],
+             "cert_type": r['cert_type'],
              "validate_service": r.get('validate_service', True)}
             for r in res
         ]
@@ -151,16 +150,15 @@ class DefaultSSLCertificateController(base.SSLCertificateController):
                     r['domain_name'])
             except ValueError:
                 LOG.info("No matching certificates found for "
-                "the domain {}".format(r['domain_name']))
+                         "the domain {}".format(r['domain_name']))
 
             if cert_for_domain:
                 if cert_for_domain.get_cert_status() == "deployed":
                     raise ValueError(u'Cert on {0} already exists'.
                                      format(r['domain_name']))
 
-
         new_queue_data = [
-            json.dumps({'flavor_id':   r['flavor_id'],  # flavor_id
+            json.dumps({'flavor_id': r['flavor_id'],  # flavor_id
                         'domain_name': r['domain_name'],    # domain_name
                         'project_id': r['project_id'],
                         'validate_service': r.get('validate_service', True)})

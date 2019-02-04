@@ -36,7 +36,7 @@ def create_ssl_certificate():
         linear_flow.Flow("Provision poppy ssl certificate",
                          retry=retry.Times(5)).add(
             create_ssl_certificate_tasks.CreateProviderSSLCertificateTask()
-            ),
+        ),
         create_ssl_certificate_tasks.SendNotificationTask(),
         create_ssl_certificate_tasks.UpdateCertInfoTask()
     )

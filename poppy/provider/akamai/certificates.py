@@ -127,8 +127,8 @@ class CertificateController(base.CertificateBase):
                     # default san_cert_hostname_limit to the value provided in
                     # the config file.
                     san_cert_hostname_limit = (
-                            san_cert_hostname_limit or
-                            self.driver.san_cert_hostname_limit
+                        san_cert_hostname_limit or
+                        self.driver.san_cert_hostname_limit
                     )
 
                     # Check san_cert to enforce number of hosts hasn't
@@ -402,8 +402,8 @@ class CertificateController(base.CertificateBase):
                         cert_name))
                     continue
                 cert_hostname_limit = (
-                        cert_hostname_limit or
-                        self.driver.san_cert_hostname_limit
+                    cert_hostname_limit or
+                    self.driver.san_cert_hostname_limit
                 )
 
                 host_names_count = utils.get_ssl_number_of_hosts_alternate(
@@ -601,9 +601,7 @@ class CertificateController(base.CertificateBase):
                 if len(resp_json['pendingChanges']) > 0:
                     status = "{0} has pending changes, skipping .." \
                              "{1} delete will be deferred until the" \
-                             "{0} becomes available again".format(
-                        found_cert, cert_obj.domain_name
-                    )
+                             "{0} becomes available again".format(found_cert, cert_obj.domain_name)
                     LOG.info(status)
                     return self.responder.failed(status)
 
@@ -633,9 +631,8 @@ class CertificateController(base.CertificateBase):
                             enrollment_id, resp.text))
                 if resp.status_code != 202:
                     status = "Certificate delete for {0} failed. " \
-                             "Status code {1}. Response {2}.".format(
-                        cert_obj.domain_name, resp.status_code, resp.text
-                    )
+                             "Status code {1}. Response {2}."\
+                        .format(cert_obj.domain_name, resp.status_code, resp.text)
                     LOG.error(status)
                     return self.responder.failed(status)
                 else:
@@ -730,8 +727,7 @@ class CertificateController(base.CertificateBase):
         headers = {
             'Accept': 'application/vnd.akamai.cps.change-id.v1+json'
         }
-        cps_cancel_url = self.driver.akamai_conf.policy_api_base_url + \
-                         change_url[1:]
+        cps_cancel_url = self.driver.akamai_conf.policy_api_base_url + change_url[1:]
         cancel_cps = self.cps_api_client.delete(cps_cancel_url,
                                                 headers=headers)
         if cancel_cps.ok:
@@ -750,4 +746,3 @@ class CertificateController(base.CertificateBase):
                      "again through retry logic".format(change_url)
             LOG.info(status)
             return self.responder.failed(status)
-

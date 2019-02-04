@@ -980,8 +980,7 @@ class ServiceController(base.ServiceBase):
                 '%s' %
                 geo_zone_code_mapping.COUNTRY_CODE_MAPPING.get(zone, '')
                 for zone in zones_list
-                if geo_zone_code_mapping.COUNTRY_CODE_MAPPING.get(zone, '')
-                != '']
+                if geo_zone_code_mapping.COUNTRY_CODE_MAPPING.get(zone, '') != '']
             if len(country_code_list) > len(set(country_code_list)):
                 raise ValueError("Duplicated country code in %s" %
                                  str(country_code_list))

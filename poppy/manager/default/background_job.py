@@ -172,11 +172,11 @@ class BackgroundJobController(base.BackgroundJobController):
 
                         try:
                             self.cert_storage.get_certs_by_domain(
-                                    cert_obj.domain_name,
-                                    project_id=cert_obj.project_id,
-                                    flavor_id=cert_obj.flavor_id,
-                                    cert_type=cert_obj.cert_type
-                                )
+                                cert_obj.domain_name,
+                                project_id=cert_obj.project_id,
+                                flavor_id=cert_obj.flavor_id,
+                                cert_type=cert_obj.cert_type
+                            )
                         except ValueError:
                             ignore_list.append(cert_dict)
                             LOG.info(
@@ -336,11 +336,11 @@ class BackgroundJobController(base.BackgroundJobController):
 
                         try:
                             self.cert_storage.get_certs_by_domain(
-                                    cert_obj.domain_name,
-                                    project_id=cert_obj.project_id,
-                                    flavor_id=cert_obj.flavor_id,
-                                    cert_type=cert_obj.cert_type
-                                )
+                                cert_obj.domain_name,
+                                project_id=cert_obj.project_id,
+                                flavor_id=cert_obj.flavor_id,
+                                cert_type=cert_obj.cert_type
+                            )
                         except ValueError:
                             ignore_list.append(cert_dict)
                             LOG.info(

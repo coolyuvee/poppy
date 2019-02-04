@@ -248,11 +248,10 @@ class TestBase(fixtures.BaseTestFixture):
                                               in expected_response['domains']
                                               if (
                                                   b_item['domain'] ==
-                                                  item['domain'])
-                                              or (b_item.get('certificate') ==
+                                                  item['domain']) or
+                                              (b_item.get('certificate') ==
                                                   'shared' and
-                                                  item['domain'].split('.')[0]
-                                                  == b_item['domain']))
+                                                  item['domain'].split('.')[0] == b_item['domain']))
                 if item['certificate'] == 'shared':
                     matched_domain_in_body['domain'] = item['domain']
                 matched_domain_in_body["certificate_status"] = (

@@ -754,8 +754,7 @@ class TestServices(base.TestCase):
         )
         purge_url = '/img/abc.jpeg'
         actual_purge_url = ("https://" +
-                            json.loads(provider_service_id)[0]['policy_name']
-                            + purge_url)
+                            json.loads(provider_service_id)[0]['policy_name'] + purge_url)
         data = {
             'objects': [
                 actual_purge_url

@@ -572,8 +572,7 @@ def is_valid_flavor_id(flavor_id):
 @decorators.validation_function
 def is_valid_analytics_request(request):
     default_end_time = datetime.datetime.utcnow()
-    default_start_time = (datetime.datetime.utcnow()
-                          - datetime.timedelta(days=1))
+    default_start_time = (datetime.datetime.utcnow() - datetime.timedelta(days=1))
     domain = request.GET.get('domain', "")
     startTime = request.GET.get('startTime',
                                 default_start_time.strftime(

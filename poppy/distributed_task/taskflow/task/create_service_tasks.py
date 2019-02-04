@@ -75,10 +75,9 @@ class CreateProviderServicesTask(task.Task):
                             project_id=project_id,
                             flavor_id=service_obj.flavor_id,
                             cert_type=domain.certificate
-                            ))
+                        ))
                 except ValueError:
                     domain.cert_info = None
-
 
         responders = []
         # try to create all service from each provider

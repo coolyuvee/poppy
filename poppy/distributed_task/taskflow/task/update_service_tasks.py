@@ -362,8 +362,7 @@ class DeleteCertsForRemovedDomains(task.Task):
         service_old = service.load_from_json(service_old_json)
         old_domains = set([
             domain.domain for domain in service_old.domains
-            if domain.protocol == 'https'
-            and
+            if domain.protocol == 'https' and
             domain.certificate in ['san', 'sni']
         ])
 
@@ -372,8 +371,7 @@ class DeleteCertsForRemovedDomains(task.Task):
         service_new = service.load_from_json(service_new_json)
         new_domains = set([
             domain.domain for domain in service_new.domains
-            if domain.protocol == 'https'
-            and
+            if domain.protocol == 'https' and
             domain.certificate in ['san', 'sni']
         ])
 

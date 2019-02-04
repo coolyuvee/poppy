@@ -209,7 +209,7 @@ class AkamaiSanMappingListController(base.Controller, hooks.HookController):
                 self.manager.background_job_controller.
                 put_san_mapping_list(san_mapping_list))
             # queue is the new queue, and deleted is deleted items
-            return {"queue": res,  "deleted": deleted}
+            return {"queue": res, "deleted": deleted}
         except Exception as e:
             pecan.abort(400, str(e))
 
@@ -272,7 +272,7 @@ class AkamaiRetryListController(base.Controller, hooks.HookController):
                 self._driver.manager.ssl_certificate_controller.
                 update_san_retry_list(queue_data))
             # queue is the new queue, and deleted is deleted items
-            return {"queue": res,  "deleted": deleted}
+            return {"queue": res, "deleted": deleted}
         except Exception as e:
             pecan.abort(400, str(e))
 

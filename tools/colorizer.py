@@ -107,15 +107,16 @@ class _Win32Colorizer(object):
         self.stream = stream
         self.screenBuffer = win32console.GetStdHandle(
             win32console.STD_OUT_HANDLE)
-        self._colors = {
-            'normal': red | green | blue,
-            'red': red | bold,
-            'green': green | bold,
-            'blue': blue | bold,
-            'yellow': red | green | bold,
-            'magenta': red | blue | bold,
-            'cyan': green | blue | bold,
-            'white': red | green | blue | bold
+        self._colors = \
+            {
+                'normal': red | green | blue,
+                'red': red | bold,
+                'green': green | bold,
+                'blue': blue | bold,
+                'yellow': red | green | bold,
+                'magenta': red | blue | bold,
+                'cyan': green | blue | bold,
+                'white': red | green | blue | bold
             }
 
     def supported(cls, stream=sys.stdout):

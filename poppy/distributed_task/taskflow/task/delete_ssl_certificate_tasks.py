@@ -25,6 +25,7 @@ LOG = log.getLogger(__name__)
 conf = cfg.CONF
 conf(project='poppy', prog='poppy', args=[])
 
+
 class DeleteProviderSSLCertificateTask(task.Task):
     default_provides = "responders"
 
@@ -38,7 +39,7 @@ class DeleteProviderSSLCertificateTask(task.Task):
             cert_obj = self.storage_controller.get_certs_by_domain(domain_name)
         except ValueError:
             cert_obj = ssl_certificate.SSLCertificate(flavor_id, domain_name,
-                                                  cert_type, project_id)
+                                                      cert_type, project_id)
 
         responders = []
         # try to delete all certificates from each provider
@@ -54,14 +55,15 @@ class DeleteProviderSSLCertificateTask(task.Task):
             if responder:
                 if 'error' in responder[provider]:
                     msg = "Failed to delete ssl certificate: {0} : due to {1}:" \
-                          "The delete operation will be retried".format(
-                        cert_obj.to_dict(), responder[provider]['error'])
+                          "The delete operation will be retried" \
+                        .format(cert_obj.to_dict(), responder[provider]['error'])
                     LOG.info(msg)
                     raise Exception(msg)
 
             responders.append(responder)
 
         return responders
+
 
 class SendNotificationTask(task.Task):
 

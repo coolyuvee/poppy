@@ -1071,15 +1071,12 @@ class TestCertificates(base.TestCase):
 
         status = "{0} has pending changes, skipping .." \
                  "{1} delete will be deferred until the" \
-                 "{0} becomes available again".format(
-            "0", cert_obj.domain_name
-        )
+                 "{0} becomes available again".format("0", cert_obj.domain_name)
 
         self.assertEqual(
             status,
             responder['Akamai']['error']
         )
-
 
     def test_cert_delete_sni_cert_positive(self):
 

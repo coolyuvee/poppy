@@ -105,25 +105,27 @@ class TestServicesCreate(base.TestCase):
 
     def test_create_with_provider_error(self):
 
-        responders = [{
-            'Akamai': {
-                'error': 'Create service failed with Akamai',
-                'error_detail': 'Error details'
-                },
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
+        responders = [
+            {
+                'Akamai':
                     {
-                        'domain': u'blog.mocksite.com',
-                        'href': u'blog.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
+                        'error': 'Create service failed with Akamai',
+                        'error_detail': 'Error details'
                     },
-                    {
-                        'domain': u'test.mocksite.com',
-                        'href': u'test.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'blog.mocksite.com',
+                            'href': u'blog.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'test.mocksite.com',
+                            'href': u'test.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         subdomain = mock.Mock()
@@ -139,21 +141,22 @@ class TestServicesCreate(base.TestCase):
 
     def test_create_with_subdomain_not_found_exception(self):
         domain_names = [u'blog.mocksite.com', u'test.mocksite.com']
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'blog.mocksite.com',
-                        'href': u'blog.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'test.mocksite.com',
-                        'href': u'test.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'blog.mocksite.com',
+                            'href': u'blog.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'test.mocksite.com',
+                            'href': u'test.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         self.client.find = mock.Mock(
@@ -175,21 +178,22 @@ class TestServicesCreate(base.TestCase):
                         access_urls_map[provider_name][domain_name])
 
     def test_create_with_generic_exception(self):
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'blog.mocksite.com',
-                        'href': u'blog.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'test.mocksite.com',
-                        'href': u'test.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'blog.mocksite.com',
+                            'href': u'blog.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'test.mocksite.com',
+                            'href': u'test.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         subdomain = mock.Mock()
@@ -206,31 +210,32 @@ class TestServicesCreate(base.TestCase):
 
     def test_create(self):
         domain_names = [u'blog.mocksite.com', u'test.mocksite.com']
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'blog.mocksite.com',
-                        'href': u'blog.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'test.mocksite.com',
-                        'href': u'test.mocksite.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'href': 'https://cloudfiles.rackspace/CONTAINER/OBJ',
-                        'rel': 'log_delivery'
-                    },
-                    {
-                        'domain': u'shared.mocksite.com',
-                        'href': u'test.mocksite.com.global.prod.fastly.net',
-                        'certificate': 'shared',
-                        'rel': 'access_url'
-                    },
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'blog.mocksite.com',
+                            'href': u'blog.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'test.mocksite.com',
+                            'href': u'test.mocksite.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'href': 'https://cloudfiles.rackspace/CONTAINER/OBJ',
+                            'rel': 'log_delivery'
+                        },
+                        {
+                            'domain': u'shared.mocksite.com',
+                            'href': u'test.mocksite.com.global.prod.fastly.net',
+                            'certificate': 'shared',
+                            'rel': 'access_url'
+                        },
+                    ]}
             }]
 
         subdomain = mock.Mock()
@@ -604,26 +609,27 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'pictures.domain.com',
-                        'href': u'pictures.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'pictures.domain.com',
+                            'href': u'pictures.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(self.service_old,
@@ -652,26 +658,27 @@ class TestServicesUpdate(base.TestCase):
             flavor_id='standard'
         )
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'pictures.domain.com',
-                        'href': u'pictures.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'pictures.domain.com',
+                            'href': u'pictures.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(
@@ -699,11 +706,13 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'error': 'Create service failed'
-                }
+        responders = [
+            {
+                'Fastly':
+                    {
+                        'id': str(uuid.uuid4()),
+                        'error': 'Create service failed'
+                    }
             }]
 
         dns_details = self.controller.update(self.service_old,
@@ -743,21 +752,22 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(self.service_old,
@@ -787,16 +797,17 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(self.service_old,
@@ -824,21 +835,22 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(self.service_old,
@@ -875,28 +887,29 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'pictures.domain.com',
-                        'href': u'pictures.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url',
-                        'certificate': 'san',
-                        'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'pictures.domain.com',
+                            'href': u'pictures.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url',
+                            'certificate': 'san',
+                            'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(self.service_old,
@@ -934,23 +947,24 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url',
-                        'certificate': 'san',
-                        'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url',
+                            'certificate': 'san',
+                            'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(
@@ -993,23 +1007,24 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url',
-                        'certificate': 'san',
-                        'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url',
+                            'certificate': 'san',
+                            'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(
@@ -1043,23 +1058,24 @@ class TestServicesUpdate(base.TestCase):
             origins=[],
             flavor_id='standard')
 
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url',
-                        'certificate': 'san',
-                        'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url',
+                            'certificate': 'san',
+                            'old_operator_url': 'old.operator.url.cdn99.mycdn.com'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(
@@ -1100,26 +1116,27 @@ class TestServicesUpdate(base.TestCase):
             log_delivery=log_delivery.LogDelivery(enabled=True)
         )
         self.service_old.log_delivery = log_delivery.LogDelivery(enabled=True)
-        responders = [{
-            'Fastly': {
-                'id': str(uuid.uuid4()),
-                'links': [
-                    {
-                        'domain': u'test.domain.com',
-                        'href': u'test.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'blog.domain.com',
-                        'href': u'blog.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    },
-                    {
-                        'domain': u'pictures.domain.com',
-                        'href': u'pictures.domain.com.global.prod.fastly.net',
-                        'rel': 'access_url'
-                    }
-                ]}
+        responders = [
+            {
+                'Fastly': {
+                    'id': str(uuid.uuid4()),
+                    'links': [
+                        {
+                            'domain': u'test.domain.com',
+                            'href': u'test.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'blog.domain.com',
+                            'href': u'blog.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        },
+                        {
+                            'domain': u'pictures.domain.com',
+                            'href': u'pictures.domain.com.global.prod.fastly.net',
+                            'rel': 'access_url'
+                        }
+                    ]}
             }]
 
         dns_details = self.controller.update(self.service_old,

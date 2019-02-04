@@ -641,9 +641,9 @@ class DefaultManagerServiceTests(base.TestCase):
                             }
                         ]
                     }
-                    ]
-                }
+                ]
             }
+        }
         with MonkeyPatchControllers(self.sc,
                                     self.sc.dns_controller,
                                     self.sc.storage_controller,

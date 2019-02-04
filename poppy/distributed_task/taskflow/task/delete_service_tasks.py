@@ -83,7 +83,7 @@ class DeleteServiceDNSMappingTask(task.Task):
         for provider in provider_details:
             provider_details[provider] = (
                 req_provider_details.load_from_json(provider_details[provider])
-                )
+            )
 
         # delete associated cname records from DNS
         dns_responder = dns.delete(
@@ -171,7 +171,7 @@ class GatherProviderDetailsTask(task.Task):
         for provider in provider_details:
             provider_details[provider] = (
                 req_provider_details.load_from_json(provider_details[provider])
-                )
+            )
 
         for responder in responders:
             provider_name = list(responder.items())[0][0]

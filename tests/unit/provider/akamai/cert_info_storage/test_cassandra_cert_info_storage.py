@@ -190,7 +190,7 @@ class TestCassandraCertInfoStorage(base.TestCase):
         self.assertTrue(
             res['spsId'] == str(json.loads(
                 self.get_returned_value[0]['info']['san_info']
-                )[cert_name]['spsId'])
+            )[cert_name]['spsId'])
         )
 
     def test_get_sni_cert_info(self):
@@ -207,7 +207,7 @@ class TestCassandraCertInfoStorage(base.TestCase):
         self.assertTrue(
             res['enrollmentId'] == str(json.loads(
                 self.get_returned_value[0]['info']['sni_info']
-                )[cert_name]['enrollmentId'])
+            )[cert_name]['enrollmentId'])
         )
 
     def test_update_cert_config(self):

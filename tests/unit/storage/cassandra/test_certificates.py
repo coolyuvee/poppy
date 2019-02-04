@@ -128,7 +128,7 @@ class CassandraStorageCertificateTests(base.TestCase):
         Should receive an Exception.
         """
         self.cc.get_certs_by_domain(
-                             domain_name="www.randomdomain.com")
+            domain_name="www.randomdomain.com")
 
     def test_get_certs_by_status(self):
         # mock the response from cassandra

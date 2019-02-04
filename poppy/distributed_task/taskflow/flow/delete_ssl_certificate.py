@@ -36,7 +36,7 @@ def delete_ssl_certificate():
         linear_flow.Flow("Deleting poppy ssl certificate",
                          retry=retry.Times(5)).add(
             delete_ssl_certificate_tasks.DeleteProviderSSLCertificateTask()
-            ),
+        ),
         delete_ssl_certificate_tasks.SendNotificationTask(),
         delete_ssl_certificate_tasks.DeleteStorageSSLCertificateTask()
     )

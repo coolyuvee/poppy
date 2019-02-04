@@ -45,7 +45,6 @@ class GetCertInfoTask(task.Task):
             return ""
 
 
-
 class CheckCertStatusTask(task.Task):
     default_provides = "status_change_to"
 

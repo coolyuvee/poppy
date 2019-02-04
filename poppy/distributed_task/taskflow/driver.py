@@ -64,7 +64,7 @@ class TaskFlowDistributedTaskDriver(base.Driver):
             # This topic could become more complicated
             "board": self.distributed_task_conf.jobboard_backend_type,
             "hosts": job_backends_hosts,
-            "path":  self.distributed_task_conf.poppy_service_worker_path,
+            "path": self.distributed_task_conf.poppy_service_worker_path,
         }
 
         persistence_backends_hosts = ','.join(['%s:%s' % (

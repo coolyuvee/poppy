@@ -190,7 +190,7 @@ class ServicesController(base.ServicesBase):
         else:
             suffix = self._driver.rackdns_conf.url
         # Note: use rindex to find last occurrence of the suffix
-        shard_name = access_url[:access_url.rindex(suffix)-1].split('.')[-1]
+        shard_name = access_url[:access_url.rindex(suffix) - 1].split('.')[-1]
         subdomain_name = '.'.join([shard_name, suffix])
 
         # for sharding is disabled, the suffix is the subdomain_name

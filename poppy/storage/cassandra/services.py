@@ -1028,8 +1028,7 @@ class ServicesController(base.ServicesController):
         domains = [json.loads(d) for d in result.get('domains', []) or []]
         restrictions = [json.loads(r)
                         for r in result.get('restrictions', []) or []]
-        caching_rules = [json.loads(c) for c in result.get('caching_rules', [])
-                         or []]
+        caching_rules = [json.loads(c) for c in result.get('caching_rules', []) or []]
         log_delivery = json.loads(result.get('log_delivery', '{}') or '{}')
         operator_status = result.get('operator_status', 'enabled')
 

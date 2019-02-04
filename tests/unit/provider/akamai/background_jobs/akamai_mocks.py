@@ -114,15 +114,16 @@ class MockStorageController(mock.Mock):
             "san",
             project_id=project_id,
             cert_details={
-                'Akamai': {
-                    u'cert_domain': u'secure2.san1.test_123.com',
-                    u'extra_info': {
-                        u'action': u'Waiting for customer domain '
-                                    'validation for blog.testabc.com',
-                        u'akamai_spsId': str(random.randint(1, 100000)),
-                        u'create_at': u'2015-09-29 16:09:12.429147',
-                        u'san cert': u'secure2.san1.test_123.com',
-                        u'status': u'create_in_progress'}
+                'Akamai':
+                    {
+                        u'cert_domain': u'secure2.san1.test_123.com',
+                        u'extra_info': {
+                            u'action': u'Waiting for customer domain '
+                                        'validation for blog.testabc.com',
+                            u'akamai_spsId': str(random.randint(1, 100000)),
+                            u'create_at': u'2015-09-29 16:09:12.429147',
+                            u'san cert': u'secure2.san1.test_123.com',
+                            u'status': u'create_in_progress'}
                     }
             }
         )
@@ -271,7 +272,7 @@ class MockPapiAPIClient(mock.Mock):
                         "edgeHostnameId": "ehn_1126816",
                         "cnameFrom": "secure.san2.test_789.com",
                         "cnameTo": "secure.test_456.com.edge_host_test.net"
-                    },  {
+                    }, {
                         'cnameTo': 'secure.test_7891.com.edge_host_test.net',
                         'cnameFrom': 'www.blogyyy.com',
                         'edgeHostnameId': 'ehn_1126816',
@@ -297,10 +298,12 @@ class MockSPSAPIClient(mock.Mock):
             "requestList":
                 [{"resourceUrl": "/config-secure-provisioning-service/"
                                  "v1/sps-requests/1849",
-                    "parameters": [{
-                        "name": "cnameHostname",
-                        "value": "secure.san3.test_123.com"
-                        }, {"name": "createType", "value": "san"},
+                    "parameters": [
+                        {
+                            "name": "cnameHostname",
+                            "value": "secure.san3.test_123.com"
+                        },
+                        {"name": "createType", "value": "san"},
                         {"name": "csr.cn",
                          "value": "secure.san3.test_123.com"},
                         {"name": "csr.c", "value": "US"},

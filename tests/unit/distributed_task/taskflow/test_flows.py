@@ -221,8 +221,7 @@ class TestFlowRuns(base.TestCase):
         ssl_cert_controller.storage.delete_certificate = mock.Mock()
         storage_controller._driver.close_connection = mock.Mock()
         service_controller.provider_wrapper.delete_certificate = mock.Mock()
-        service_controller.provider_wrapper.delete_certificate. \
-            _mock_return_value = {
+        service_controller.provider_wrapper.delete_certificate._mock_return_value = {
             "cdn_provider": {
                 'error': "",
                 'error_detail': ""

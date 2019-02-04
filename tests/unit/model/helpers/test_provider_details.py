@@ -68,5 +68,4 @@ class TestProviderDetails(base.TestCase):
 
         self.assertTrue(
             self.my_provider_detail.domains_certificate_status.
-            get_domain_certificate_status("www.ab.com")
-            == status)
+            get_domain_certificate_status("www.ab.com") == status)

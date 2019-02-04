@@ -112,7 +112,7 @@ class PropertyGetLatestVersionTask(task.Task):
                     raise RuntimeError('PAPI API request failed.'
                                        'Exception: %s' % resp.text)
                 LOG.info("New version for : %s is %s" % (self.property_id,
-                                                         str(max_version+1)))
+                                                         str(max_version + 1)))
                 return max_version + 1
 
 
